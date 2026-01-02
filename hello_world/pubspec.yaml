@@ -1,0 +1,35 @@
+name: hello_world
+description: "Crockery Manager Pro - A professional UI converted from HTML."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.10.4 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Default Icons
+  cupertino_icons: ^1.0.8
+
+  # NEW: HTML wala 'Inter' font use karne ke liye
+  google_fonts: ^6.1.0
+
+  # NEW: Agar aapko exact HTML wale icons (FontAwesome) chahiye hon
+  font_awesome_flutter: ^10.7.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  
+  # Standard lints package (Version corrected to stable)
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Agar aap future mein local images use karna chahein:
+  # assets:
+  #   - assets/images/
