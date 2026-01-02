@@ -16,7 +16,7 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
     // 3 Second ka Timer
     Timer(const Duration(seconds: 3), () {
-      // 3 sec baad MainScreen par jao (aur wapis aana band karo)
+      // 3 sec baad MainScreen par jao
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const MainScreen()),
@@ -27,7 +27,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Ya apni brand color (Dark Blue)
+      backgroundColor: Colors.white,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -39,20 +39,17 @@ class _SplashScreenState extends State<SplashScreen> {
                 color: Colors.red[50], // Background circle
                 shape: BoxShape.circle,
               ),
-              // Agar aapne asset lagaya hai to Image.asset use karein
-              // Filhal main Icon use kar raha hoon safe side ke liye
               child: Image.asset(
-                'assets/logo.png', // <--- Apni file ka naam yahan likhein
+                'assets/logo.png', // Apni file check karein
                 width: 100,
                 height: 100,
                 fit: BoxFit.contain,
-                // Agar image load na ho to Icon dikhaye
                 errorBuilder: (c, o, s) =>
                     const Icon(Icons.storefront, size: 80, color: Colors.red),
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 30),
 
             // 2. APP NAME
             const Text(
@@ -61,28 +58,31 @@ class _SplashScreenState extends State<SplashScreen> {
                 fontSize: 24,
                 fontWeight: FontWeight.w900,
                 color: Colors.black,
-                letterSpacing: 0,
+                letterSpacing: 2,
               ),
             ),
-            Text(
-              "Jehangira Underpass Shop#21", // Chota subtitle
-              style: TextStyle(
-                color: Colors.grey,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
+
+            const SizedBox(height: 40),
+
+            // 3. LOADING LINE BAR (New Change)
+            SizedBox(
+              width: 200, // Bar ki chaurayi (width)
+              child: ClipRRect(
+                // Kinare Gol karne ke liye
+                borderRadius: BorderRadius.circular(10),
+                child: LinearProgressIndicator(
+                  backgroundColor: Colors.red[100], // Halka peeche ka rang
+                  color: Colors.red, // Bhara hua rang
+                  minHeight: 6, // Line ki motayi
+                ),
               ),
             ),
 
             const SizedBox(height: 10),
 
-            // 3. Loading Circle (Chota sa)
-            const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                color: Colors.red,
-                strokeWidth: 2,
-              ),
+            const Text(
+              "Loading System...",
+              style: TextStyle(color: Colors.grey, fontSize: 10),
             ),
           ],
         ),
