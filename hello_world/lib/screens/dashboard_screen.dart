@@ -1,8 +1,8 @@
-// lib/screens/dashboard_screen.dart
 import 'package:flutter/material.dart';
-import '../widgets/filter_buttons.dart'; // Import kiya
-import '../widgets/overview_card.dart'; // Import kiya
-import '../widgets/alert_card.dart'; // Import kiya
+import '../widgets/filter_buttons.dart';
+import '../widgets/overview_card.dart';
+import '../widgets/alert_card.dart';
+import '../widgets/analysis_chart.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -29,13 +29,22 @@ class DashboardScreen extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.all(24.0),
           child: Column(
+            // <--- Yahan saari cheezein ek ke baad ek hain
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              FilterButtons(), // Chota sa code
-              SizedBox(height: 20),
-              OverviewCard(), // Clean code
-              SizedBox(height: 20),
-              AlertCard(), // Clean code
+              const FilterButtons(), // 1. Upar Buttons
+
+              const SizedBox(height: 20),
+
+              const OverviewCard(), // 2. Main Card
+
+              const SizedBox(height: 20),
+
+              const AlertCard(), // <--- 3. ALERT KO YAHAN UPAR LE AAYE
+
+              const SizedBox(height: 20),
+
+              const AnalysisChart(), // 4. Chart ab sabse neeche chala gaya
             ],
           ),
         ),

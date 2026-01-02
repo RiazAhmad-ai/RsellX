@@ -24,10 +24,24 @@ class _CameraScreenState extends State<CameraScreen>
   @override
   void initState() {
     super.initState();
+    // Animation shuru ki
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
+
+    // === NEW CODE: AUTO CLOSE LOGIC ===
+    // Agar hum 'add' mode mein hain, to 3 second baad wapis jao
+    if (widget.mode == 'add') {
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) {
+          // Check karein ke screen abhi bhi khuli hai
+          // 'true' ka matlab: Scan Successful raha
+          Navigator.pop(context, true);
+        }
+      });
+    }
+    // ==================================
   }
 
   @override

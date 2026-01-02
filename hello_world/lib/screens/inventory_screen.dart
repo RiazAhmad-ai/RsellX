@@ -30,19 +30,33 @@ class InventoryScreen extends StatelessWidget {
                   ),
 
                   // === BUTTON START ===
-                  // === BUTTON START ===
                   GestureDetector(
-                    onTap: () {
-                      Navigator.push(
+                    // Yahan 'async' lagaya taake hum 'await' use kar sakein
+                    onTap: () async {
+                      // 1. Camera kholo aur Jawab ka intezar karo (await)
+                      final result = await Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const CameraScreen(
-                            mode: 'add',
-                          ), // <--- 'add' pass kiya
+                          builder: (context) => const CameraScreen(mode: 'add'),
                         ),
                       );
+
+                      // 2. Agar Jawab 'true' aaya (Yani scan pura hua)
+                      if (result == true && context.mounted) {
+                        // 3. To ab Form (Sheet) kholo
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.white,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(30),
+                            ),
+                          ),
+                          builder: (context) => const AddItemSheet(),
+                        );
+                      }
                     },
-                    // ... baki code same ...
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -63,10 +77,11 @@ class InventoryScreen extends StatelessWidget {
                     ),
                   ),
                   // === BUTTON END ===
-                  // === BUTTON END ===
                 ],
               ),
             ),
+
+            const SizedBox(height: 24),
 
             // 2. SEARCH BAR
             Padding(
