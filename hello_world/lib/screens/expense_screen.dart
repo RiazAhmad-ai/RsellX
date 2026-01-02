@@ -10,20 +10,20 @@ class ExpenseScreen extends StatefulWidget {
 }
 
 class _ExpenseScreenState extends State<ExpenseScreen> {
-  // 1. STATE VARIABLE: Current Date (Default: Aaj ki tareekh)
+  // 1. STATE VARIABLES
   DateTime _selectedDate = DateTime.now();
-
   String _selectedCategory = "All";
 
+  // Dummy Data
   final List<Map<String, String>> _todayExpenses = [
-    {"id": "1", "title": "Staff Lunch", "category": "Food", "amount": "Rs 850"},
+    {"id": "1", "title": "Staff Lunch", "category": "Food", "amount": "850"},
     {
       "id": "2",
       "title": "Rickshaw Fare",
       "category": "Travel",
-      "amount": "Rs 200",
+      "amount": "200",
     },
-    {"id": "5", "title": "Chai Pani", "category": "Food", "amount": "Rs 150"},
+    {"id": "5", "title": "Chai Pani", "category": "Food", "amount": "150"},
   ];
 
   final List<Map<String, String>> _yesterdayExpenses = [
@@ -31,15 +31,14 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
       "id": "3",
       "title": "Electricity Bill",
       "category": "Bills",
-      "amount": "Rs 4,500",
+      "amount": "4,500",
     },
-    {
-      "id": "4",
-      "title": "Shop Rent",
-      "category": "Rent",
-      "amount": "Rs 35,000",
-    },
+    {"id": "4", "title": "Shop Rent", "category": "Rent", "amount": "35,000"},
   ];
+
+  final List<String> categories = ["Food", "Bills", "Rent", "Travel", "Extra"];
+
+  // === FUNCTIONS ===
 
   void _deleteItem(String id, bool isToday) {
     setState(() {
@@ -50,6 +49,216 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
       }
     });
   }
+
+  // === EDIT FEATURE (New Function) ===
+  void _showEditSheet(Map<String, String> item) {
+    // Purana data controllers mein bhara
+    TextEditingController amountController = TextEditingController(
+      text: item['amount'],
+    );
+    TextEditingController titleController = TextEditingController(
+      text: item['title'],
+    );
+    String currentCategory = item['category']!;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true, // Full screen keyboard ke liye
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          // Sheet ke andar state badalne ke liye
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 24,
+                right: 24,
+                top: 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Handle
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  const Text(
+                    "EDIT EXPENSE",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // 1. AMOUNT INPUT
+                  const Text(
+                    "Update Amount",
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        "Rs",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      SizedBox(
+                        width: 150,
+                        child: TextFormField(
+                          controller: amountController,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 40,
+                            color: Colors.black,
+                          ),
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  const SizedBox(height: 20),
+
+                  // 2. TITLE INPUT
+                  TextFormField(
+                    controller: titleController,
+                    decoration: InputDecoration(
+                      labelText: "Description",
+                      prefixIcon: const Icon(
+                        Icons.edit_note,
+                        color: Colors.grey,
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // 3. CATEGORY SELECT
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "CHANGE CATEGORY",
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: categories.map((cat) {
+                        bool isSelected = currentCategory == cat;
+                        return GestureDetector(
+                          onTap: () {
+                            setModalState(() {
+                              currentCategory = cat;
+                            });
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? Colors.blue
+                                  : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              cat,
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : Colors.black,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+
+                  // 4. UPDATE BUTTON
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        // Asli List mein Data Update
+                        setState(() {
+                          item['amount'] = amountController.text;
+                          item['title'] = titleController.text;
+                          item['category'] = currentCategory;
+                        });
+                        Navigator.pop(context); // Sheet Band
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Expense Updated!"),
+                            backgroundColor: Colors.blue,
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue, // Blue for Edit
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text(
+                        "UPDATE EXPENSE",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+  // =================================
 
   List<Map<String, String>> _getFilteredList(
     List<Map<String, String>> originalList,
@@ -63,19 +272,17 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
     }
   }
 
-  // === 2. CALENDAR PICKER LOGIC ===
   Future<void> _pickDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
-      firstDate: DateTime(2020), // 2020 se pehle nahi ja sakte
-      lastDate: DateTime.now(), // Aaj ke baad nahi ja sakte
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
       builder: (context, child) {
-        // Red Theme for Calendar
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Colors.red, // Header Color
+              primary: Colors.red,
               onPrimary: Colors.white,
               onSurface: Colors.black,
             ),
@@ -89,7 +296,6 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
       setState(() {
         _selectedDate = picked;
       });
-      // User ko feedback diya
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Showing expenses for ${_getMonthName(picked.month)}"),
@@ -98,7 +304,6 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
     }
   }
 
-  // Helper: Mahinay ka naam lene ke liye (1 -> JAN)
   String _getMonthName(int month) {
     const months = [
       "JAN",
@@ -122,7 +327,6 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
     final filteredToday = _getFilteredList(_todayExpenses);
     final filteredYesterday = _getFilteredList(_yesterdayExpenses);
 
-    // Dynamic Month Name
     String currentMonthName = _getMonthName(_selectedDate.month);
     String currentYear = _selectedDate.year.toString();
 
@@ -162,7 +366,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // === 3. UPDATED HEADER CARD (Clickable Calendar) ===
+            // HEADER CARD
             Container(
               margin: const EdgeInsets.all(24),
               padding: const EdgeInsets.all(24),
@@ -184,7 +388,6 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Dynamic Date Text
                       Text(
                         "TOTAL SPENT ($currentMonthName $currentYear)",
                         style: const TextStyle(
@@ -194,10 +397,8 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                           letterSpacing: 1,
                         ),
                       ),
-
-                      // ALIVE CALENDAR ICON
                       GestureDetector(
-                        onTap: _pickDate, // <--- Click Function
+                        onTap: _pickDate,
                         child: Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
@@ -226,7 +427,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
               ),
             ),
 
-            // CATEGORY FILTERS
+            // FILTERS
             SizedBox(
               height: 40,
               child: ListView(
@@ -284,7 +485,6 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
     );
   }
 
-  // (Baqi helper functions same hain, unhein change karne ki zaroorat nahi)
   Widget _buildDateHeader(String text) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
@@ -323,7 +523,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               content: const Text(
-                "Kya aap waqai is Expenses ko delete karna chahte hain?",
+                "Kya aap waqai is kharchay ko delete karna chahte hain?",
               ),
               actions: <Widget>[
                 TextButton(
@@ -364,66 +564,83 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
         padding: const EdgeInsets.only(right: 20),
         child: const Icon(Icons.delete, color: Colors.red),
       ),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                shape: BoxShape.circle,
+
+      // === TAP TO EDIT FEATURE ===
+      child: GestureDetector(
+        onTap: () {
+          // Tap karne par Edit Sheet khulegi
+          _showEditSheet(item);
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
-              child: const Icon(
-                Icons.receipt_long,
-                color: Colors.black,
-                size: 18,
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.edit,
+                  color: Colors.blue,
+                  size: 18,
+                ), // Icon change kiya Edit feel ke liye
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item['title']!,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    Text(
+                      item['category']!,
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    item['title']!,
+                    "Rs ${item['amount']!}",
                     style: const TextStyle(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.black,
                       fontSize: 14,
                     ),
                   ),
-                  Text(
-                    item['category']!,
-                    style: const TextStyle(
-                      color: Colors.grey,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  const Text(
+                    "Tap to edit",
+                    style: TextStyle(color: Colors.grey, fontSize: 8),
                   ),
                 ],
               ),
-            ),
-            Text(
-              item['amount']!,
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                color: Colors.red,
-                fontSize: 14,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -4,9 +4,16 @@ import 'package:flutter/material.dart';
 class OverviewCard extends StatefulWidget {
   final String title;
   final String amount;
-  // Percentage variable hata diya
+  final IconData icon; // Icon bhi change kar sakein
+  final List<Color>? gradientColors; // Rang badalne ke liye
 
-  const OverviewCard({super.key, required this.title, required this.amount});
+  const OverviewCard({
+    super.key,
+    required this.title,
+    required this.amount,
+    this.icon = Icons.inventory_2, // Default Icon
+    this.gradientColors, // Optional Color
+  });
 
   @override
   State<OverviewCard> createState() => _OverviewCardState();
@@ -21,8 +28,11 @@ class _OverviewCardState extends State<OverviewCard> {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+        gradient: LinearGradient(
+          // Agar color diya hai to wo use karo, warna Default Blue
+          colors:
+              widget.gradientColors ??
+              [const Color(0xFF1E293B), const Color(0xFF0F172A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -47,7 +57,7 @@ class _OverviewCardState extends State<OverviewCard> {
                   Text(
                     widget.title.toUpperCase(),
                     style: const TextStyle(
-                      color: Colors.grey,
+                      color: Colors.white70, // Thoda saaf dikhne ke liye
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.5,
@@ -65,19 +75,22 @@ class _OverviewCardState extends State<OverviewCard> {
                       _isBalanceVisible
                           ? Icons.visibility_outlined
                           : Icons.visibility_off_outlined,
-                      color: Colors.grey,
+                      color: Colors.white70,
                       size: 18,
                     ),
                   ),
                 ],
               ),
-              const Icon(Icons.inventory_2, color: Colors.grey, size: 18),
+              Icon(
+                widget.icon,
+                color: Colors.white70,
+                size: 18,
+              ), // Dynamic Icon
             ],
           ),
 
-          const SizedBox(
-            height: 16,
-          ), // Thoda gap badhaya taake center mein lage
+          const SizedBox(height: 16),
+
           // === AMOUNT TEXT ===
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
@@ -91,8 +104,6 @@ class _OverviewCardState extends State<OverviewCard> {
               ),
             ),
           ),
-
-          // Neeche wali percentage Row yahan se DELETE kar di
         ],
       ),
     );
