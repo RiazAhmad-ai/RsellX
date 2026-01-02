@@ -2,7 +2,16 @@
 import 'package:flutter/material.dart';
 
 class AnalysisChart extends StatelessWidget {
-  const AnalysisChart({super.key});
+  final String title;
+  final String profit;
+  final List<String> labels; // W1, W2, W3...
+
+  const AnalysisChart({
+    super.key,
+    required this.title,
+    required this.profit,
+    required this.labels,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -11,19 +20,17 @@ class AnalysisChart extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(32),
-        // Halka border taake background se alag lage
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
         children: [
-          // 1. Header (Title & Profit)
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     "BUSINESS ANALYSIS",
                     style: TextStyle(
                       fontSize: 10,
@@ -33,8 +40,8 @@ class AnalysisChart extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    "Monthly Summary",
-                    style: TextStyle(
+                    title,
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
                       color: Color(0xFF1E293B),
@@ -45,7 +52,7 @@ class AnalysisChart extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
+                  const Text(
                     "NET PROFIT",
                     style: TextStyle(
                       fontSize: 9,
@@ -54,8 +61,8 @@ class AnalysisChart extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    "Rs 343,150",
-                    style: TextStyle(
+                    profit,
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w900,
                       color: Colors.green,
@@ -66,20 +73,22 @@ class AnalysisChart extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-
-          // 2. Graph Bars (W1, W2, W3, W4)
           SizedBox(
-            height: 120, // Chart area ki height
+            height: 120,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              crossAxisAlignment:
-                  CrossAxisAlignment.end, // Bars neeche se shuru hon
-              children: [
-                _buildBarGroup("W1", 0.4, 0.2), // 40% Sale, 20% Kharcha
-                _buildBarGroup("W2", 0.6, 0.3),
-                _buildBarGroup("W3", 0.8, 0.4),
-                _buildBarGroup("W4", 0.5, 0.25, isSelected: true), // Blue Text
-              ],
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: List.generate(labels.length, (index) {
+                // Fake Random Heights for demo logic
+                double sale = (index % 2 == 0) ? 0.8 : 0.5;
+                double expense = 0.3;
+                return _buildBarGroup(
+                  labels[index],
+                  sale,
+                  expense,
+                  index == labels.length - 1,
+                );
+              }),
             ),
           ),
         ],
@@ -87,31 +96,27 @@ class AnalysisChart extends StatelessWidget {
     );
   }
 
-  // Helper: Ek hafte ke 2 bars (Green & Red)
   Widget _buildBarGroup(
     String label,
     double salePct,
-    double expensePct, {
-    bool isSelected = false,
-  }) {
+    double expensePct,
+    bool isSelected,
+  ) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        // Bars
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // Green Bar (Sale)
             Container(
               width: 8,
-              height: 80 * salePct, // 80px max height
+              height: 80 * salePct,
               decoration: BoxDecoration(
                 color: Colors.green,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(width: 4),
-            // Red Bar (Expense)
             Container(
               width: 8,
               height: 80 * expensePct,
@@ -123,7 +128,6 @@ class AnalysisChart extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        // Label (W1, W2...)
         Text(
           label,
           style: TextStyle(

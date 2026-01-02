@@ -2,10 +2,9 @@
 import 'package:flutter/material.dart';
 
 class CameraScreen extends StatefulWidget {
-  // Yeh variable batayega ke hum bech rahe hain (sell) ya add kar rahe hain (add)
+  // Mode batayega ke hum bech rahe hain (sell) ya add kar rahe hain (add)
   final String mode;
 
-  // Constructor mein mode mangaya (required)
   const CameraScreen({super.key, required this.mode});
 
   @override
@@ -16,37 +15,35 @@ class _CameraScreenState extends State<CameraScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
-  // Helper getters: Mode ke hisaab se rang aur text decide karo
+  // Helpers: Mode ke hisaab se rang aur text decide karo
   bool get isAdding => widget.mode == 'add';
-  Color get themeColor => isAdding ? Colors.blue : Colors.red;
+  Color get themeColor =>
+      isAdding ? Colors.blue : Colors.red; // Blue for Add, Red for Sell
   String get modeText => isAdding ? "AI ADDING MODE" : "AI SELLING MODE";
 
   @override
   void initState() {
     super.initState();
-    // Animation shuru ki
+
+    // 1. Animation Shuru (Lakeer upar neeche chalane ke liye)
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
 
-    // === NEW CODE: AUTO CLOSE LOGIC ===
-    // Agar hum 'add' mode mein hain, to 3 second baad wapis jao
-    if (widget.mode == 'add') {
-      Future.delayed(const Duration(seconds: 3), () {
-        if (mounted) {
-          // Check karein ke screen abhi bhi khuli hai
-          // 'true' ka matlab: Scan Successful raha
-          Navigator.pop(context, true);
-        }
-      });
-    }
-    // ==================================
+    // 2. AUTO CLOSE LOGIC (Timer)
+    // 3 second baad maano scan complete ho gaya aur wapis jao
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        // 'true' ka matlab: Scan Kamyab raha -> Ab Form kholo
+        Navigator.pop(context, true);
+      }
+    });
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller.dispose(); // Animation band karo memory save karne ke liye
     super.dispose();
   }
 
@@ -56,7 +53,7 @@ class _CameraScreenState extends State<CameraScreen>
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 1. Background Image
+          // === 1. BACKGROUND IMAGE (Camera View) ===
           Container(
             height: double.infinity,
             width: double.infinity,
@@ -64,7 +61,7 @@ class _CameraScreenState extends State<CameraScreen>
             child: Image.network(
               'https://images.unsplash.com/photo-1517705008128-361805f42e86?auto=format&fit=crop&q=80&w=414',
               fit: BoxFit.cover,
-              color: Colors.black.withOpacity(0.5),
+              color: Colors.black.withOpacity(0.5), // Thoda andhera
               colorBlendMode: BlendMode.darken,
               errorBuilder: (context, error, stackTrace) => const Center(
                 child: Icon(Icons.broken_image, color: Colors.white),
@@ -72,19 +69,20 @@ class _CameraScreenState extends State<CameraScreen>
             ),
           ),
 
-          // 2. ANIMATED SCAN LINE (Color change hoga)
+          // === 2. ANIMATED SCAN LINE ===
           AnimatedBuilder(
             animation: _controller,
             builder: (context, child) {
               final height = MediaQuery.of(context).size.height;
+              // Line upar neeche move karegi (20% height se 70% height tak)
               return Positioned(
                 top: height * 0.2 + (height * 0.5 * _controller.value),
                 left: 0,
                 right: 0,
                 child: Container(
-                  height: 3,
+                  height: 3, // Line ki motayi
                   decoration: BoxDecoration(
-                    color: themeColor, // <--- Dynamic Color
+                    color: themeColor, // <--- Dynamic Color (Red/Blue)
                     boxShadow: [
                       BoxShadow(
                         color: themeColor.withOpacity(0.6),
@@ -98,7 +96,7 @@ class _CameraScreenState extends State<CameraScreen>
             },
           ),
 
-          // 3. UI Overlay
+          // === 3. UI OVERLAY (Buttons & Text) ===
           SafeArea(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -109,16 +107,20 @@ class _CameraScreenState extends State<CameraScreen>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      // Back Button (Cancel Scan)
                       IconButton(
                         icon: const Icon(
                           Icons.close,
                           color: Colors.white,
                           size: 30,
                         ),
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () => Navigator.pop(
+                          context,
+                          false,
+                        ), // False matlab scan cancel hua
                       ),
 
-                      // MODE BADGE (Text aur Dot ka rang change hoga)
+                      // Mode Badge (Dynamic Color)
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -133,10 +135,8 @@ class _CameraScreenState extends State<CameraScreen>
                         ),
                         child: Row(
                           children: [
-                            // Dot
                             Icon(Icons.circle, color: themeColor, size: 10),
                             const SizedBox(width: 8),
-                            // Text
                             Text(
                               modeText,
                               style: const TextStyle(
@@ -166,7 +166,8 @@ class _CameraScreenState extends State<CameraScreen>
                         ),
                       ),
                       const SizedBox(height: 20),
-                      // Fake Capture Button
+
+                      // Fake Capture Button (Design Only)
                       Container(
                         width: 80,
                         height: 80,

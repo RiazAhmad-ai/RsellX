@@ -2,7 +2,16 @@
 import 'package:flutter/material.dart';
 
 class OverviewCard extends StatelessWidget {
-  const OverviewCard({super.key});
+  final String title;
+  final String amount;
+  final String percentage;
+
+  const OverviewCard({
+    super.key,
+    required this.title,
+    required this.amount,
+    required this.percentage,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -24,40 +33,40 @@ class OverviewCard extends StatelessWidget {
           ),
         ],
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "MAHANA MAAL KI QEMAT",
-                style: TextStyle(
+                title.toUpperCase(), // Title (e.g., Mahana Maal...)
+                style: const TextStyle(
                   color: Colors.grey,
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.5,
                 ),
               ),
-              Icon(Icons.inventory_2, color: Colors.grey, size: 18),
+              const Icon(Icons.inventory_2, color: Colors.grey, size: 18),
             ],
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           Text(
-            "Rs 842,500",
-            style: TextStyle(
+            amount, // Price (e.g., Rs 842,500)
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 32,
               fontWeight: FontWeight.w900,
             ),
           ),
-          SizedBox(height: 5),
+          const SizedBox(height: 5),
           Row(
             children: [
-              Icon(Icons.arrow_drop_up, color: Colors.greenAccent),
+              const Icon(Icons.arrow_drop_up, color: Colors.greenAccent),
               Text(
-                "+2.4% pichlay mahinay se",
-                style: TextStyle(color: Colors.greenAccent, fontSize: 12),
+                percentage, // % change
+                style: const TextStyle(color: Colors.greenAccent, fontSize: 12),
               ),
             ],
           ),

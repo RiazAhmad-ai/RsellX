@@ -33,3 +33,6 @@ flutter:
   # Agar aap future mein local images use karna chahein:
   # assets:
   #   - assets/images/
+# To add assets to your application, add an assets section, like this:
+  assets:
+    - assets/logo.png  # <--- Yahan apni file ka naam likhein
