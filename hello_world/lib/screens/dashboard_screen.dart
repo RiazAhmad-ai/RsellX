@@ -4,6 +4,7 @@ import '../widgets/filter_buttons.dart';
 import '../widgets/overview_card.dart';
 import '../widgets/alert_card.dart';
 import '../widgets/analysis_chart.dart';
+import 'settings_screen.dart'; // Settings screen import
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -15,31 +16,24 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   String _filter = "Monthly";
 
-  Map<String, dynamic> get currentData {
+  // Ab yeh data sirf CHART ke liye use hoga
+  Map<String, dynamic> get currentChartData {
     if (_filter == "Weekly") {
       return {
-        "cardTitle": "Haftawar Maal",
-        "amount": "Rs 82,400",
-        "pct": "+5.1% pichlay haftay se",
-        "chartTitle": "Weekly Summary",
+        "chartTitle": "Weekly Sales",
         "profit": "Rs 12,500",
         "labels": ["M", "T", "W", "T", "F", "S", "S"],
       };
     } else if (_filter == "Annual") {
       return {
-        "cardTitle": "Salana Maal",
-        "amount": "Rs 4,120,000",
-        "pct": "+12% pichlay saal se",
-        "chartTitle": "Annual Summary",
+        "chartTitle": "Annual Sales",
         "profit": "Rs 1,200,500",
         "labels": ["Q1", "Q2", "Q3", "Q4"],
       };
     } else {
+      // Monthly
       return {
-        "cardTitle": "Mahana Maal",
-        "amount": "Rs 842,500",
-        "pct": "+2.4% pichlay mahinay se",
-        "chartTitle": "Monthly Summary",
+        "chartTitle": "Monthly Sales",
         "profit": "Rs 343,150",
         "labels": ["W1", "W2", "W3", "W4"],
       };
@@ -48,39 +42,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final data = currentData;
+    final chartData = currentChartData; // Sirf Chart ka data nikala
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-
-      // === APP BAR CHANGE ===
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        // Title spacing 0 kiya taake logo left side se chipak ke start ho
         titleSpacing: 24,
-
-        // Custom Title (Logo + Name)
         title: Row(
           children: [
-            // 1. Logo Circle
-            // 1. Custom Image Logo
             ClipOval(
-              // Image ko gol katne ke liye
               child: Image.asset(
-                'assets/logo.png', // <--- YAHAN APNI FILE KA NAAM CHECK KAREIN
-                height: 40, // Size
+                'assets/logo.png', // Aapka Logo
+                height: 40,
                 width: 40,
-                fit: BoxFit.cover, // Image ko pura fit kare
+                fit: BoxFit.cover,
+                errorBuilder: (c, o, s) => Container(
+                  height: 40,
+                  width: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.storefront,
+                    color: Colors.red,
+                    size: 24,
+                  ),
+                ),
               ),
             ),
-            const SizedBox(width: 12), // Beech mein gap
-            // 2. Dukan Ka Naam
+            const SizedBox(width: 12),
             const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "RIAZ AHMAD CROKERY", // Bara Title
+                  "RIAZ AHMAD CROKERY",
                   style: TextStyle(
                     color: Colors.black,
                     fontWeight: FontWeight.w900,
@@ -88,7 +86,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 Text(
-                  "Jehangira Underpass Shop#21", // Chota subtitle
+                  "Jehangira Underpass Shop#21",
                   style: TextStyle(
                     color: Colors.grey,
                     fontSize: 10,
@@ -99,17 +97,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ],
         ),
-
-        // Right Side Settings Icon
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined, color: Colors.black),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+            },
           ),
           const SizedBox(width: 10),
         ],
       ),
-
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -120,17 +120,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 selectedFilter: _filter,
                 onFilterChanged: (newFilter) {
                   setState(() {
-                    _filter = newFilter;
+                    _filter = newFilter; // Sirf Chart update hoga
                   });
                 },
               ),
 
               const SizedBox(height: 20),
 
-              OverviewCard(
-                title: data['cardTitle'],
-                amount: data['amount'],
-                percentage: data['pct'],
+              // === FIXED OVERVIEW CARD (Total Inventory) ===
+              // === FIXED OVERVIEW CARD (No Percentage) ===
+              const OverviewCard(
+                title: "TOTAL STOCK VALUE",
+                amount: "Rs 1,250,000",
+                // percentage: "..." <--- YEH LINE DELETE KAR DI
               ),
 
               const SizedBox(height: 20),
@@ -139,10 +141,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               const SizedBox(height: 20),
 
+              // === DYNAMIC CHART (Filter se change hoga) ===
               AnalysisChart(
-                title: data['chartTitle'],
-                profit: data['profit'],
-                labels: data['labels'],
+                title:
+                    chartData['chartTitle'], // Weekly/Monthly yahan change hoga
+                profit: chartData['profit'],
+                labels: chartData['labels'],
               ),
 
               const SizedBox(height: 40),

@@ -1,156 +1,187 @@
 // lib/widgets/add_expense_sheet.dart
 import 'package:flutter/material.dart';
 
-class AddExpenseSheet extends StatelessWidget {
+class AddExpenseSheet extends StatefulWidget {
   const AddExpenseSheet({super.key});
+
+  @override
+  State<AddExpenseSheet> createState() => _AddExpenseSheetState();
+}
+
+class _AddExpenseSheetState extends State<AddExpenseSheet> {
+  String selectedCategory = "Food";
+  final List<String> categories = ["Food", "Bills", "Rent", "Travel", "Extra"];
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      // Keyboard ke liye jagah banayi
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 20,
-        right: 20,
+        left: 24,
+        right: 24,
         top: 20,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center, // Center Alignment
         children: [
           // Handle
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(10),
-              ),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(10),
             ),
           ),
           const SizedBox(height: 20),
 
           const Text(
-            "NAYA KHARCHA",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 20),
-
-          // 1. Amount Input
-          const Text(
-            "KITNA KHARCHA HUA?",
+            "ADD NEW EXPENSE",
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
               color: Colors.grey,
+              letterSpacing: 1,
             ),
           ),
-          const SizedBox(height: 5),
-          TextFormField(
-            keyboardType: TextInputType.number,
-            style: const TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 24,
-              color: Colors.red,
-            ),
-            decoration: InputDecoration(
-              prefixText: "Rs ",
-              filled: true,
-              fillColor: Colors.red[50],
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
+
           const SizedBox(height: 20),
 
-          // 2. Name Input
+          // === 1. BIG AMOUNT INPUT (Fixed Design) ===
           const Text(
-            "KIS CHEEZ KA?",
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
+            "Enter Amount",
+            style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
-          const SizedBox(height: 5),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              const Text(
+                "Rs",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
+              ),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 150, // Fixed width
+                child: TextFormField(
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.center, // Beech mein likha jayega
+                  autofocus: true, // Kholte hi keyboard aajaye
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 40,
+                    color: Colors.black,
+                  ),
+                  decoration: const InputDecoration(
+                    hintText: "0",
+                    hintStyle: TextStyle(color: Colors.grey),
+                    border: InputBorder.none, // Line hata di
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const Divider(), // Patli line neeche
+          const SizedBox(height: 20),
+
+          // === 2. DESCRIPTION INPUT ===
           TextFormField(
             decoration: InputDecoration(
-              hintText: "Misal: Chai, Bill, Rent...",
+              labelText: "Description (Tafseel)",
+              prefixIcon: const Icon(Icons.edit_note, color: Colors.grey),
               filled: true,
               fillColor: Colors.grey[50],
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
               ),
             ),
           ),
           const SizedBox(height: 20),
 
-          // 3. Category Chips (Selection)
-          const Text(
-            "CATEGORY",
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
+          // === 3. CATEGORY CHIPS ===
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "SELECT CATEGORY",
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
             ),
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              _buildChip("Food", true),
-              const SizedBox(width: 10),
-              _buildChip("Bills", false),
-              const SizedBox(width: 10),
-              _buildChip("Transport", false),
-            ],
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: categories.map((cat) {
+                bool isSelected = selectedCategory == cat;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      selectedCategory = cat;
+                    });
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.red : Colors.grey[100],
+                      borderRadius: BorderRadius.circular(20),
+                      border: isSelected
+                          ? null
+                          : Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Text(
+                      cat,
+                      style: TextStyle(
+                        color: isSelected ? Colors.white : Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
           ),
           const SizedBox(height: 30),
 
-          // 4. Save Button
+          // === 4. SAVE BUTTON ===
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                padding: const EdgeInsets.symmetric(vertical: 20),
+                backgroundColor: Colors.black, // Black button stylish lagta hai
+                padding: const EdgeInsets.symmetric(vertical: 18),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
               child: const Text(
                 "SAVE EXPENSE",
                 style: TextStyle(
                   color: Colors.white,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
                 ),
               ),
             ),
           ),
           const SizedBox(height: 20),
         ],
-      ),
-    );
-  }
-
-  Widget _buildChip(String label, bool isActive) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isActive ? Colors.red : Colors.grey[100],
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: isActive ? Colors.white : Colors.black,
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-        ),
       ),
     );
   }

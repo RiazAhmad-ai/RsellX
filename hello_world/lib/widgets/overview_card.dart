@@ -1,17 +1,19 @@
 // lib/widgets/overview_card.dart
 import 'package:flutter/material.dart';
 
-class OverviewCard extends StatelessWidget {
+class OverviewCard extends StatefulWidget {
   final String title;
   final String amount;
-  final String percentage;
+  // Percentage variable hata diya
 
-  const OverviewCard({
-    super.key,
-    required this.title,
-    required this.amount,
-    required this.percentage,
-  });
+  const OverviewCard({super.key, required this.title, required this.amount});
+
+  @override
+  State<OverviewCard> createState() => _OverviewCardState();
+}
+
+class _OverviewCardState extends State<OverviewCard> {
+  bool _isBalanceVisible = true;
 
   @override
   Widget build(BuildContext context) {
@@ -36,40 +38,61 @@ class OverviewCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // === TITLE + EYE ICON ===
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title.toUpperCase(), // Title (e.g., Mahana Maal...)
-                style: const TextStyle(
-                  color: Colors.grey,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.5,
-                ),
+              Row(
+                children: [
+                  Text(
+                    widget.title.toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _isBalanceVisible = !_isBalanceVisible;
+                      });
+                    },
+                    child: Icon(
+                      _isBalanceVisible
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      color: Colors.grey,
+                      size: 18,
+                    ),
+                  ),
+                ],
               ),
               const Icon(Icons.inventory_2, color: Colors.grey, size: 18),
             ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            amount, // Price (e.g., Rs 842,500)
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 32,
-              fontWeight: FontWeight.w900,
+
+          const SizedBox(
+            height: 16,
+          ), // Thoda gap badhaya taake center mein lage
+          // === AMOUNT TEXT ===
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: Text(
+              _isBalanceVisible ? widget.amount : "Rs •••••••",
+              key: ValueKey<bool>(_isBalanceVisible),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
-          const SizedBox(height: 5),
-          Row(
-            children: [
-              const Icon(Icons.arrow_drop_up, color: Colors.greenAccent),
-              Text(
-                percentage, // % change
-                style: const TextStyle(color: Colors.greenAccent, fontSize: 12),
-              ),
-            ],
-          ),
+
+          // Neeche wali percentage Row yahan se DELETE kar di
         ],
       ),
     );

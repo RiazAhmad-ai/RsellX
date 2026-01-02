@@ -21,7 +21,7 @@ class ExpenseSection extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                "RECENT KHARCHA",
+                "RECENT Expenses",
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w900,

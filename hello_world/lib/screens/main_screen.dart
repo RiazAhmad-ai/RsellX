@@ -111,7 +111,7 @@ class _MainScreenState extends State<MainScreen> {
               _buildTabItem(
                 icon: Icons.wallet_outlined,
                 activeIcon: Icons.wallet,
-                label: "Kharcha",
+                label: "Expenses",
                 index: 2,
               ),
               // Phir History (Index 3)
