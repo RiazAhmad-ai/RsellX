@@ -29,7 +29,7 @@ class Formatter {
     }
 
     RegExp reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
-    Function mathFunc = (Match match) => '${match[1]},';
-    return s.replaceAllMapped(reg, mathFunc);
+    // Fix: Pass the function directly to satisfy type system
+    return s.replaceAllMapped(reg, (Match match) => '${match[1]},');
   }
 }
