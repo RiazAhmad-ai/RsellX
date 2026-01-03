@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart'; // For compute
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
 
@@ -33,43 +34,54 @@ class AIService {
       throw Exception("Model load nahi hua! App restart karein.");
     }
 
-    // A. Image file ko parhna aur process karna
+    // A. Image file ko parhna aur process karna (Isolate mein)
     final imageData = await imageFile.readAsBytes();
-    img.Image? originalImage = img.decodeImage(imageData);
 
-    if (originalImage == null) throw Exception("Image corrupt hai.");
-
-    // B. Image ko chota karna (224x224) jo AI model ki requirement hai
-    img.Image resizedImage = img.copyResize(
-      originalImage,
-      width: 224,
-      height: 224,
-    );
-
-    // C. Image ko Matrix mein badalna (Numbers -1 se 1 ke beech)
-    // Input shape: [1, 224, 224, 3]
-    var input = List.generate(1, (batch) {
-      return List.generate(224, (y) {
-        return List.generate(224, (x) {
-          var pixel = resizedImage.getPixel(x, y);
-          // Normalize RGB values
-          return [
-            (pixel.r - 127.5) / 127.5,
-            (pixel.g - 127.5) / 127.5,
-            (pixel.b - 127.5) / 127.5,
-          ];
-        });
-      });
-    });
+    // HEAVY TASK: Running in separate thread to prevent UI freeze
+    var input = await compute(_processImage, imageData);
 
     // D. Output ke liye jagah banana (1001 features vector)
     // Shape: [1, 1001]
     var output = List.filled(1 * 1001, 0.0).reshape([1, 1001]);
 
     // E. Jadoo: AI run karna
+    // Interpreter operations usually need to be on the same thread unless handled carefully.
+    // TFLite Flutter bindings generally run inference efficiently (often C++ side).
+    // However, if needed, inference could also be moved to isolate but passing Interpreter is tricky.
+    // For now, image processing is the main bottleneck, so we offloaded that.
     _interpreter!.run(input, output);
 
     // F. Result wapis bhejna
     return List<double>.from(output[0]);
   }
+}
+
+// === ISOLATE FUNCTION (Must be outside class or static) ===
+List<List<List<List<double>>>> _processImage(List<int> imageData) {
+  img.Image? originalImage = img.decodeImage(Uint8List.fromList(imageData));
+
+  if (originalImage == null) throw Exception("Image corrupt hai.");
+
+  // B. Image ko chota karna (224x224) jo AI model ki requirement hai
+  img.Image resizedImage = img.copyResize(
+    originalImage,
+    width: 224,
+    height: 224,
+  );
+
+  // C. Image ko Matrix mein badalna (Numbers -1 se 1 ke beech)
+  // Input shape: [1, 224, 224, 3]
+  return List.generate(1, (batch) {
+    return List.generate(224, (y) {
+      return List.generate(224, (x) {
+        var pixel = resizedImage.getPixel(x, y);
+        // Normalize RGB values
+        return [
+          (pixel.r - 127.5) / 127.5,
+          (pixel.g - 127.5) / 127.5,
+          (pixel.b - 127.5) / 127.5,
+        ];
+      });
+    });
+  });
 }

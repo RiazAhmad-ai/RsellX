@@ -20,8 +20,17 @@ Future<void> main() async {
 
   // 2. Setup Database (Hive)
   await Hive.initFlutter();
-  Hive.registerAdapter(InventoryItemAdapter()); // Generated adapter
-  await Hive.openBox<InventoryItem>('inventoryBox'); // Box kholna
+
+  // Register Adapter if not already registered (InventoryItemAdapter is generated)
+  // Note: If you face adapter errors, ensure generated file exists and is correct.
+  if (!Hive.isAdapterRegistered(0)) {
+    Hive.registerAdapter(InventoryItemAdapter());
+  }
+
+  // Open Boxes
+  await Hive.openBox<InventoryItem>('inventoryBox');
+  await Hive.openBox('expensesBox'); // Box for Expenses (List of Maps)
+  await Hive.openBox('historyBox');  // Box for History (List of Maps)
 
   // 3. Load AI Model
   await AIService().loadModel();

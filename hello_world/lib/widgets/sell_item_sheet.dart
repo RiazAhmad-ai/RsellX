@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/inventory_model.dart'; // Database Model
+import '../data/data_store.dart'; // For History
 
 class SellItemSheet extends StatefulWidget {
   final InventoryItem item; // Jo item bechna hai wo yahan aayega
@@ -47,7 +48,21 @@ class _SellItemSheetState extends State<SellItemSheet> {
     // 3. Database mein Save Karein (Hamesha ke liye)
     widget.item.save();
 
-    // 4. Band karein aur success dikhayein
+    // 4. History mein Record Karein
+    final now = DateTime.now();
+    final timeStr = "${now.hour > 12 ? now.hour - 12 : (now.hour == 0 ? 12 : now.hour)}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? 'PM' : 'AM'}";
+    final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+    DataStore().addHistoryItem({
+      "item": widget.item.name,
+      "qty": _qty.toString(),
+      "price": _finalPrice.toStringAsFixed(0),
+      "time": timeStr,
+      "date": dateStr, // Using ISO date for sorting/filtering in DataStore but kept as string
+      "status": "Completed",
+    });
+
+    // 5. Band karein aur success dikhayein
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
