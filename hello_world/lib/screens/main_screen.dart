@@ -54,7 +54,7 @@ class _MainScreenState extends State<MainScreen> {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
         ),
-        builder: (context) => const SellItemSheet(), // <--- Selling Sheet
+        builder: (context) => SellItemSheet(item: result), // <--- Selling Sheet
       );
     }
   }

@@ -1,8 +1,61 @@
-// lib/widgets/sell_item_sheet.dart
 import 'package:flutter/material.dart';
+import '../data/inventory_model.dart'; // Database Model
 
-class SellItemSheet extends StatelessWidget {
-  const SellItemSheet({super.key});
+class SellItemSheet extends StatefulWidget {
+  final InventoryItem item; // Jo item bechna hai wo yahan aayega
+
+  const SellItemSheet({super.key, required this.item});
+
+  @override
+  State<SellItemSheet> createState() => _SellItemSheetState();
+}
+
+class _SellItemSheetState extends State<SellItemSheet> {
+  int _qty = 1;
+  late double _finalPrice;
+
+  @override
+  void initState() {
+    super.initState();
+    _finalPrice = widget.item.price; // Shuru mein price 1 item ki hogi
+  }
+
+  void _updatePrice(String qtyStr) {
+    setState(() {
+      _qty = int.tryParse(qtyStr) ?? 1;
+      _finalPrice = widget.item.price * _qty;
+    });
+  }
+
+  void _confirmSale() {
+    // 1. Check karein stock hai ya nahi
+    if (widget.item.stock < _qty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("❌ Stock khatam ho gaya hai!"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // 2. Stock Update Karein (Minus)
+    setState(() {
+      widget.item.stock = widget.item.stock - _qty;
+    });
+
+    // 3. Database mein Save Karein (Hamesha ke liye)
+    widget.item.save();
+
+    // 4. Band karein aur success dikhayein
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("✅ Sold ${_qty}x ${widget.item.name}! Stock Updated."),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,18 +86,14 @@ class SellItemSheet extends StatelessWidget {
             children: [
               Text(
                 "ITEM MIL GAYA!",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.black,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
               ),
               Icon(Icons.check_circle, color: Colors.green, size: 28),
             ],
           ),
           const SizedBox(height: 20),
 
-          // Item Details Card
+          // Item Details Card (Dynamic Data)
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -60,29 +109,33 @@ class SellItemSheet extends StatelessWidget {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.coffee, color: Colors.brown),
+                  child: const Icon(Icons.inventory_2, color: Colors.blue),
                 ),
                 const SizedBox(width: 16),
-                const Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Bone China Cup",
-                      style: TextStyle(
+                      widget.item.name, // <-- Asli Naam
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                        fontSize: 16,
                       ),
                     ),
                     Text(
-                      "Stock: 12 Pcs",
-                      style: TextStyle(color: Colors.grey, fontSize: 10),
+                      "Stock Available: ${widget.item.stock}", // <-- Asli Stock
+                      style: TextStyle(
+                        color: widget.item.stock < 5 ? Colors.red : Colors.grey,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
                 const Spacer(),
-                const Text(
-                  "Rs 450",
-                  style: TextStyle(
+                Text(
+                  "Rs ${widget.item.price.toStringAsFixed(0)}", // <-- Asli Price
+                  style: const TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: 16,
                     color: Colors.green,
@@ -93,7 +146,7 @@ class SellItemSheet extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          // Qty & Discount Inputs
+          // Qty Inputs
           Row(
             children: [
               Expanded(
@@ -113,6 +166,8 @@ class SellItemSheet extends StatelessWidget {
                       initialValue: "1",
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.center,
+                      onChanged:
+                          _updatePrice, // <-- Type karte hi price update hogi
                       style: const TextStyle(
                         fontWeight: FontWeight.w900,
                         fontSize: 20,
@@ -136,7 +191,7 @@ class SellItemSheet extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      "FINAL PRICE",
+                      "FINAL BILL",
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
@@ -144,21 +199,21 @@ class SellItemSheet extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 5),
-                    TextFormField(
-                      initialValue: "450",
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 20,
-                        color: Colors.green,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 15,
+                        horizontal: 15,
                       ),
-                      decoration: InputDecoration(
-                        prefixText: "Rs ",
-                        filled: true,
-                        fillColor: Colors.green[50],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide.none,
+                      decoration: BoxDecoration(
+                        color: Colors.green[50],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        "Rs ${_finalPrice.toStringAsFixed(0)}", // <-- Total Bill
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 20,
+                          color: Colors.green,
                         ),
                       ),
                     ),
@@ -169,36 +224,25 @@ class SellItemSheet extends StatelessWidget {
           ),
           const SizedBox(height: 30),
 
-          // HUGE SELL BUTTON
+          // SELL BUTTON
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context); // Sheet band
-                // Yahan future mein Database update ka code aayega
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Sale Successful! Added to History"),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              },
+              onPressed: _confirmSale, // <-- Button dabane par stock minus hoga
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green, // Green for Sale
+                backgroundColor: Colors.green,
                 padding: const EdgeInsets.symmetric(vertical: 20),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
                 ),
-                elevation: 10,
-                shadowColor: Colors.green.withOpacity(0.4),
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.print, color: Colors.white),
+                  Icon(Icons.shopping_cart_checkout, color: Colors.white),
                   SizedBox(width: 10),
                   Text(
-                    "CONFIRM SALE & PRINT",
+                    "CONFIRM SALE",
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w900,

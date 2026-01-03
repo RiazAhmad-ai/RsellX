@@ -1,9 +1,12 @@
-// lib/screens/inventory_screen.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
-import '../widgets/add_item_sheet.dart';
-import 'camera_screen.dart'; // Camera Screen Import
-import '../data/data_store.dart';
-import '../utils/formatting.dart';
+import 'package:hive_flutter/hive_flutter.dart'; // Database listener
+import '../data/inventory_model.dart'; // Data Model
+import '../services/ai_service.dart'; // AI Brain
+import '../services/recognition_service.dart'; // Match Maker
+import 'camera_screen.dart'; // Camera
+import '../widgets/add_item_sheet.dart'; // Add Form
+import '../widgets/sell_item_sheet.dart'; // Sell Form
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -13,88 +16,11 @@ class InventoryScreen extends StatefulWidget {
 }
 
 class _InventoryScreenState extends State<InventoryScreen> {
-  String _searchQuery = "";
   final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = "";
 
-  @override
-  void initState() {
-    super.initState();
-    DataStore().addListener(_onDataChange);
-  }
-
-  @override
-  void dispose() {
-    DataStore().removeListener(_onDataChange);
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _onDataChange() {
-    setState(() {});
-  }
-
-  // === 1. NEW LOGIC: CAMERA FIRST, THEN SHEET ===
-  Future<void> _addNewItemWithCamera() async {
-    // Step 1: Pehle Camera Kholo
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const CameraScreen(mode: 'add')),
-    );
-
-    // Step 2: Agar Camera se 'True' wapis aya (Matlab Tasveer le li)
-    if (result == true && mounted) {
-      // Step 3: Ab Form Kholo
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.white,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-        ),
-        builder: (context) => const AddItemSheet(),
-      );
-
-      // User ko batao ke tasveer save ho gayi
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Picture Captured! Now enter details."),
-          backgroundColor: Colors.green,
-        ),
-      );
-    }
-  }
-  // ============================================
-
-  // Search Logic (Camera for Search)
-  Future<void> _scanForSearch() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const CameraScreen(mode: 'add')),
-    );
-
-    if (result == true) {
-      setState(() {
-        _searchQuery = "Cup";
-        _searchController.text = "Cup";
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Item Detected: Bone China Cup")),
-      );
-    }
-  }
-
-  // Edit Stock Function
-  void _showEditStockSheet(Map<String, dynamic> item) {
-    TextEditingController nameController = TextEditingController(
-      text: item['name'],
-    );
-    TextEditingController priceController = TextEditingController(
-      text: item['price'],
-    );
-    TextEditingController stockController = TextEditingController(
-      text: item['stock'],
-    );
-
+  // === 1. ADD ITEM (Sirf Sheet Kholo) ===
+  void _addNewItemWithCamera() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -102,161 +28,153 @@ class _InventoryScreenState extends State<InventoryScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            left: 24,
-            right: 24,
-            top: 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                "EDIT STOCK ITEM",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue,
-                  letterSpacing: 1,
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              TextFormField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: "Item Name",
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: priceController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: "Price",
-                        filled: true,
-                        fillColor: Colors.blue[50],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextFormField(
-                      controller: stockController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: "Stock",
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 30),
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Map<String, dynamic> updatedItem = Map.from(item);
-                    updatedItem['name'] = nameController.text;
-                    updatedItem['price'] = priceController.text;
-                    updatedItem['stock'] = stockController.text;
-
-                    DataStore().updateInventoryItem(item['id'], updatedItem);
-
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Item Updated!")),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                  ),
-                  child: const Text(
-                    "UPDATE ITEM",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
-        );
-      },
+      builder: (context) => const AddItemSheet(),
     );
   }
 
-  void _deleteItem(String id) {
-    DataStore().deleteInventoryItem(id);
+  // === 2. MAGIC: AI SEARCH & SELL ===
+  Future<void> _scanForSearch() async {
+    // Step A: Camera kholo
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const CameraScreen(mode: 'scan')),
+    );
+
+    // Step B: Check karo ke photo wapis aayi hai ya nahi
+    if (result != null && result is File) {
+      // User ko batao hum dhoond rahe hain
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("🔍 Identifying Item..."),
+          duration: Duration(milliseconds: 1000),
+        ),
+      );
+
+      try {
+        // Step C: Photo ko AI Brain mein bhejo
+        final embedding = await AIService().getEmbedding(result);
+
+        // Step D: Database se saara data uthao
+        final box = Hive.box<InventoryItem>('inventoryBox');
+        final allItems = box.values.toList();
+
+        // Step E: Match Dhoondo
+        final match = RecognitionService().findMatch(embedding, allItems);
+
+        if (!mounted) return;
+
+        if (match != null) {
+          // ✅ MATCH MIL GAYA!
+          // Ab hum 'match' bhej rahe hain (jo InventoryItem hai) -> Safe!
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.white,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+            ),
+            builder: (context) => SellItemSheet(item: match),
+          );
+        } else {
+          // ❌ Match nahi mila
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("❌ Item nahi mila! Pehle Add karein."),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        print("Error: $e");
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: $e")));
+      }
+    }
+  }
+
+  // === 3. DELETE ITEM ===
+  void _deleteItem(InventoryItem item) {
+    item.delete();
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text("Item Deleted")));
   }
 
+  // === 4. EDIT ITEM SHEET ===
+  void _showEditSheet(InventoryItem item) {
+    final nameCtrl = TextEditingController(text: item.name);
+    final priceCtrl = TextEditingController(text: item.price.toString());
+    final stockCtrl = TextEditingController(text: item.stock.toString());
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          top: 20,
+          left: 20,
+          right: 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              "EDIT ITEM",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(labelText: "Name"),
+            ),
+            TextField(
+              controller: priceCtrl,
+              decoration: const InputDecoration(labelText: "Price"),
+              keyboardType: TextInputType.number,
+            ),
+            TextField(
+              controller: stockCtrl,
+              decoration: const InputDecoration(labelText: "Stock"),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                item.name = nameCtrl.text;
+                item.price = double.tryParse(priceCtrl.text) ?? item.price;
+                item.stock = int.tryParse(stockCtrl.text) ?? item.stock;
+                item.save();
+                Navigator.pop(context);
+              },
+              child: const Text("UPDATE"),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final filteredList = DataStore().inventory.where((item) {
-      return item['name'].toString().toLowerCase().contains(
-        _searchQuery.toLowerCase(),
-      );
-    }).toList();
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         title: const Text(
-          "My Inventory",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900),
+          "My Inventory (AI)",
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         actions: [
-          // === UPDATED PLUS BUTTON ===
           IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: const BoxDecoration(
-                color: Colors.blue,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.add, color: Colors.white, size: 20),
+            icon: const CircleAvatar(
+              backgroundColor: Colors.blue,
+              child: Icon(Icons.add, color: Colors.white),
             ),
-            // Ab yeh pehle CAMERA kholera, phir SHEET
             onPressed: _addNewItemWithCamera,
           ),
           const SizedBox(width: 10),
@@ -264,6 +182,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
       ),
       body: Column(
         children: [
+          // SEARCH BAR
           Container(
             padding: const EdgeInsets.all(16),
             color: Colors.white,
@@ -271,11 +190,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
               controller: _searchController,
               onChanged: (val) => setState(() => _searchQuery = val),
               decoration: InputDecoration(
-                hintText: "Search items...",
+                hintText: "Search or Scan...",
                 prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                // CAMERA BUTTON
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.camera_alt, color: Colors.blue),
-                  onPressed: _scanForSearch,
+                  onPressed:
+                      _scanForSearch, // <--- Yahan ghalati thi, ab theek hai
                 ),
                 filled: true,
                 fillColor: Colors.grey[100],
@@ -287,141 +208,94 @@ class _InventoryScreenState extends State<InventoryScreen> {
             ),
           ),
 
+          // ITEM LIST
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: filteredList.length,
-              itemBuilder: (context, index) {
-                final item = filteredList[index];
-                int stock = Formatter.parseInt(item['stock'].toString());
-                bool isLowStock = stock < 5;
+            child: ValueListenableBuilder<Box<InventoryItem>>(
+              valueListenable: Hive.box<InventoryItem>(
+                'inventoryBox',
+              ).listenable(),
+              builder: (context, box, _) {
+                final items = box.values.where((item) {
+                  return item.name.toLowerCase().contains(
+                    _searchQuery.toLowerCase(),
+                  );
+                }).toList();
 
-                return Dismissible(
-                  key: Key(item['id']),
-                  direction: DismissDirection.endToStart,
-                  confirmDismiss: (d) async => await showDialog(
-                    context: context,
-                    builder: (c) => AlertDialog(
-                      title: const Text("Delete?"),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(c, false),
-                          child: const Text("No"),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(c, true),
-                          child: const Text(
-                            "Yes",
-                            style: TextStyle(color: Colors.red),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  onDismissed: (d) => _deleteItem(item['id']),
-                  background: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.red[100],
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.only(right: 20),
-                    child: const Icon(Icons.delete, color: Colors.red),
-                  ),
-                  child: GestureDetector(
-                    onTap: () => _showEditStockSheet(item),
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                if (items.isEmpty) {
+                  return const Center(child: Text("No items found."));
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: items.length,
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    return Dismissible(
+                      key: Key(item.id),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        color: Colors.red,
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 20),
+                        child: const Icon(Icons.delete, color: Colors.white),
                       ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.inventory_2_outlined,
-                              color: Colors.blue,
-                              size: 30,
-                            ),
+                      onDismissed: (direction) => _deleteItem(item),
+                      child: GestureDetector(
+                        onTap: () => _showEditSheet(item),
+                        child: Card(
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item['name'],
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  "Rs ${item['price']}",
-                                  style: const TextStyle(
-                                    color: Colors.blue,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isLowStock
-                                      ? Colors.red[50]
-                                      : Colors.green[50],
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  "$stock Left",
-                                  style: TextStyle(
-                                    color: isLowStock
-                                        ? Colors.red
-                                        : Colors.green,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: ListTile(
+                            leading: Container(
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                color: Colors.blue[50],
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                              const SizedBox(height: 4),
-                              const Text(
-                                "Tap to edit",
+                              child: const Icon(
+                                Icons.inventory_2,
+                                color: Colors.blue,
+                              ),
+                            ),
+                            title: Text(
+                              item.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: Text(
+                              "Rs ${item.price.toStringAsFixed(0)}",
+                            ),
+                            trailing: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: item.stock < 5
+                                    ? Colors.red[50]
+                                    : Colors.green[50],
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                "${item.stock} Left",
                                 style: TextStyle(
-                                  fontSize: 8,
-                                  color: Colors.grey,
+                                  color: item.stock < 5
+                                      ? Colors.red
+                                      : Colors.green,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            ],
+                            ),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 );
               },
             ),

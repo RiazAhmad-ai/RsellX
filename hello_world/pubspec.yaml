@@ -5,34 +5,48 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.10.4 <4.0.0'
+  sdk: '>=3.10.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
 
-  # Default Icons
+  # --- UI Icons & Fonts ---
   cupertino_icons: ^1.0.8
-
-  # NEW: HTML wala 'Inter' font use karne ke liye
   google_fonts: ^6.1.0
-
-  # NEW: Agar aapko exact HTML wale icons (FontAwesome) chahiye hon
   font_awesome_flutter: ^10.7.0
+
+  # --- NEW: CAMERA (Asli Camera Access Karne Ke Liye) ---
+  camera: ^0.11.3
+
+  # --- NEW: AI & Database (Offline System) ---
+  # 1. AI Model run karne ke liye
+  tflite_flutter: ^0.12.1
+  
+  # 2. Image process karne ke liye (Resize/Crop)
+  image: ^4.1.3
+  
+  # 3. Offline Database (Fast Storage)
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  
+  # 4. Storage Path (Files Save Karne Ke Liye)
+  path_provider: ^2.1.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   
-  # Standard lints package (Version corrected to stable)
   flutter_lints: ^6.0.0
+  
+  # --- NEW: Code Generators (Database Code Banane Ke Liye) ---
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.8
 
 flutter:
   uses-material-design: true
 
-  # Agar aap future mein local images use karna chahein:
-  # assets:
-  #   - assets/images/
-# To add assets to your application, add an assets section, like this:
+  # Assets Section (Images & Models)
   assets:
-    - assets/logo.png  # <--- Yahan apni file ka naam likhein
+    - assets/logo.png
+    - assets/mobilenet_v2.tflite  # <--- Yeh file 'assets' folder mein honi chahiye

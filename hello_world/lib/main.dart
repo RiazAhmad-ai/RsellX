@@ -1,8 +1,31 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
-import 'screens/splash_screen.dart'; // Pehle Splash Screen aayegi
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:camera/camera.dart'; // Camera package
+import 'screens/splash_screen.dart';
+import 'data/inventory_model.dart'; // Humara naya model
+import 'services/ai_service.dart'; // Humara AI Brain
 
-void main() {
+// Global Variable taake camera puri app mein mile
+late List<CameraDescription> cameras;
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 1. Setup Camera
+  try {
+    cameras = await availableCameras();
+  } on CameraException catch (e) {
+    print('Error: $e.code\nError Message: $e.message');
+  }
+
+  // 2. Setup Database (Hive)
+  await Hive.initFlutter();
+  Hive.registerAdapter(InventoryItemAdapter()); // Generated adapter
+  await Hive.openBox<InventoryItem>('inventoryBox'); // Box kholna
+
+  // 3. Load AI Model
+  await AIService().loadModel();
+
   runApp(const MyApp());
 }
 
@@ -12,15 +35,13 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false, // Debug ka ribbon hataya
-      title: 'RIAZ AHMAD CROKERY',
+      debugShowCheckedModeBanner: false,
+      title: 'RIAZ AHMAD CROCKERY',
       theme: ThemeData(
-        // App ka color theme (Laal aur Safed)
         primarySwatch: Colors.red,
         scaffoldBackgroundColor: Colors.white,
         useMaterial3: true,
       ),
-      // App yahan se shuru hogi
       home: const SplashScreen(),
     );
   }

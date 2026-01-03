@@ -1,6 +1,9 @@
-// lib/widgets/add_item_sheet.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
-import '../data/data_store.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import '../screens/camera_screen.dart'; // Camera Screen
+import '../services/ai_service.dart'; // Brain
+import '../data/inventory_model.dart'; // Database Model
 
 class AddItemSheet extends StatefulWidget {
   const AddItemSheet({super.key});
@@ -10,102 +13,105 @@ class AddItemSheet extends StatefulWidget {
 }
 
 class _AddItemSheetState extends State<AddItemSheet> {
-  // 1. STATE VARIABLES
-  bool _hasSizes = false; // Kya sizes hain?
-
-  // Agar sizes hain to unki list yahan store hogi
-  final List<Map<String, String>> _sizesList = [];
-
-  // Controllers (Simple item ke liye)
+  // Controllers
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _simplePriceController = TextEditingController();
-  final TextEditingController _simpleQtyController = TextEditingController(
+  final TextEditingController _priceController = TextEditingController();
+  final TextEditingController _stockController = TextEditingController(
     text: "1",
   );
+  final TextEditingController _descController = TextEditingController();
 
-  // === FUNCTION: SIZE ADD KARNE KA DIALOG ===
-  void _addSizeDialog() {
-    TextEditingController sizeNameController = TextEditingController();
-    TextEditingController sizePriceController = TextEditingController();
-    TextEditingController sizeQtyController = TextEditingController(text: "1");
+  // Images Store karne ke liye
+  final List<File> _capturedImages = [];
+  bool _isSaving = false; // Loading indicator ke liye
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Add Size Variant"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: sizeNameController,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: "Size Name (e.g. Small, 42)",
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: sizePriceController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: "Price",
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: TextField(
-                    controller: sizeQtyController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: "Qty",
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (sizeNameController.text.isNotEmpty) {
-                setState(() {
-                  _sizesList.add({
-                    "name": sizeNameController.text,
-                    "price": sizePriceController.text,
-                    "qty": sizeQtyController.text,
-                  });
-                });
-                Navigator.pop(context);
-              }
-            },
-            child: const Text("ADD"),
-          ),
-        ],
-      ),
+  // === 1. CAMERA SE PHOTO LENA ===
+  Future<void> _takePhoto() async {
+    // Camera Screen kholo ('add' mode mein)
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const CameraScreen(mode: 'add')),
     );
+
+    // Agar photo wapis aayi hai
+    if (result != null && result is File) {
+      setState(() {
+        _capturedImages.add(result);
+      });
+    }
   }
 
-  // === FUNCTION: REMOVE SIZE ===
-  void _removeSize(int index) {
+  // === 2. IMAGE REMOVE KARNA ===
+  void _removePhoto(int index) {
     setState(() {
-      _sizesList.removeAt(index);
+      _capturedImages.removeAt(index);
     });
+  }
+
+  // === 3. FINAL SAVE LOGIC (JADOO YAHAN HAI) ===
+  Future<void> _saveItem() async {
+    if (_nameController.text.isEmpty || _priceController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Name aur Price zaroori hain!")),
+      );
+      return;
+    }
+
+    if (_capturedImages.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Kam se kam ek photo lein!")),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    try {
+      // A. Har Photo ka AI Fingerprint nikalo
+      List<List<double>> allEmbeddings = [];
+
+      for (var imageFile in _capturedImages) {
+        // AI Service ko call kiya
+        List<double> fingerprint = await AIService().getEmbedding(imageFile);
+        allEmbeddings.add(fingerprint);
+      }
+
+      // B. Data Object banao
+      final newItem = InventoryItem(
+        id: DateTime.now().millisecondsSinceEpoch.toString(), // Unique ID
+        name: _nameController.text,
+        price: double.tryParse(_priceController.text) ?? 0.0,
+        stock: int.tryParse(_stockController.text) ?? 0,
+        description: _descController.text,
+        embeddings: allEmbeddings, // Yahan numbers save ho rahe hain
+      );
+
+      // C. Hive Box mein Save karo
+      var box = Hive.box<InventoryItem>('inventoryBox');
+      await box.add(newItem);
+
+      // D. Success! Sheet band karo
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Item Saved with AI Fingerprints! ✅")),
+        );
+      }
+    } catch (e) {
+      print("Error saving: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: $e")));
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Keyboard ke liye padding
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
 
     return Padding(
@@ -120,6 +126,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Handle Bar
             Center(
               child: Container(
                 width: 40,
@@ -132,317 +139,165 @@ class _AddItemSheetState extends State<AddItemSheet> {
             ),
             const SizedBox(height: 20),
 
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "STOCK ADD KAREIN",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+            const Text(
+              "ADD NEW STOCK",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+
+            // === INPUT FIELDS ===
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                labelText: "Item Name",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                Icon(Icons.add_box, color: Colors.blue),
+                filled: true,
+                fillColor: Colors.grey[50],
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _priceController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: "Price",
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: _stockController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: "Stock Qty",
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                    ),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 20),
 
-            // 1. ITEM NAME (Common)
+            // === PHOTOS SECTION ===
             const Text(
-              "ITEM NAME",
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-              ),
+              "Photos (Multiple Angles)",
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 5),
-            TextFormField(
-              controller: _nameController,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: "Misal: T-Shirt / Joggers",
-                filled: true,
-                fillColor: Colors.grey[50],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-                prefixIcon: const Icon(
-                  Icons.shopping_bag_outlined,
-                  color: Colors.grey,
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
 
-            // === 2. SIZES TOGGLE SWITCH ===
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: _hasSizes ? Colors.blue[50] : Colors.grey[100],
-                borderRadius: BorderRadius.circular(12),
-                border: _hasSizes ? Border.all(color: Colors.blue) : null,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Kya is item ke Sizes hain?",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Switch(
-                    value: _hasSizes,
-                    activeColor: Colors.blue,
-                    onChanged: (val) {
-                      setState(() {
-                        _hasSizes = val;
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // === 3. LOGIC: EITHER SIMPLE OR SIZES ===
-            if (!_hasSizes) ...[
-              // === OPTION A: SIMPLE ITEM (No Sizes) ===
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "PRICE (RS)",
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        TextFormField(
-                          controller: _simplePriceController,
-                          keyboardType: TextInputType.number,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w900,
+            SizedBox(
+              height: 100,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _capturedImages.length + 1, // +1 for Add Button
+                itemBuilder: (context, index) {
+                  // Last item is Add Button
+                  if (index == _capturedImages.length) {
+                    return GestureDetector(
+                      onTap: _takePhoto,
+                      child: Container(
+                        width: 100,
+                        margin: const EdgeInsets.only(right: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          // FIX: Changed BorderStyle.dash to BorderStyle.solid
+                          border: Border.all(
                             color: Colors.blue,
+                            style: BorderStyle.solid,
                           ),
-                          decoration: InputDecoration(
-                            hintText: "0",
-                            filled: true,
-                            fillColor: Colors.blue[50],
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: BorderSide.none,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.camera_alt, color: Colors.blue),
+                            Text(
+                              "Add Photo",
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.blue,
+                              ),
                             ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "QUANTITY",
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        TextFormField(
-                          controller: _simpleQtyController,
-                          textAlign: TextAlign.center,
-                          keyboardType: TextInputType.number,
-                          style: const TextStyle(fontWeight: FontWeight.w900),
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: Colors.grey[100],
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ] else ...[
-              // === OPTION B: SIZES LIST (Variants) ===
-              const Text(
-                "ADDED SIZES:",
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              // List of added sizes
-              if (_sizesList.isEmpty)
-                const Center(
-                  child: Text(
-                    "No sizes added yet.",
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                )
-              else
-                ListView.builder(
-                  shrinkWrap: true, // Zaroori hai column ke andar list ke liye
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _sizesList.length,
-                  itemBuilder: (context, index) {
-                    final size = _sizesList[index];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: Colors.grey.shade200),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.blue[50],
-                          child: Text(
-                            size['name']![0].toUpperCase(),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue,
-                            ),
-                          ),
-                        ),
-                        title: Text(
-                          "Size: ${size['name']}",
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text(
-                          "Price: ${size['price']} | Qty: ${size['qty']}",
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _removeSize(index),
+                          ],
                         ),
                       ),
                     );
-                  },
-                ),
+                  }
 
-              const SizedBox(height: 10),
-
-              // Add Size Button
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _addSizeDialog,
-                  icon: const Icon(Icons.add),
-                  label: const Text("ADD A SIZE (e.g. S, M, L)"),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-
-            const SizedBox(height: 20),
-
-            // Description (Common)
-            TextFormField(
-              decoration: InputDecoration(
-                hintText: "Description (Optional)...",
-                filled: true,
-                fillColor: Colors.grey[50],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
+                  // Captured Images
+                  return Stack(
+                    children: [
+                      Container(
+                        width: 100,
+                        margin: const EdgeInsets.only(right: 10),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          image: DecorationImage(
+                            image: FileImage(_capturedImages[index]),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: GestureDetector(
+                          onTap: () => _removePhoto(index),
+                          child: Container(
+                            color: Colors.black54,
+                            child: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
 
-            // Save Button
+            // === SAVE BUTTON ===
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  // Logic to check simple or sizes
-                  if (_hasSizes && _sizesList.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Please add at least one size!"),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                    return;
-                  }
-
-                  if (_nameController.text.isEmpty) {
-                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Please enter item name!"),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                    return;
-                  }
-
-                  if (!_hasSizes) {
-                    DataStore().addInventoryItem({
-                      "id": DateTime.now().millisecondsSinceEpoch.toString(),
-                      "name": _nameController.text,
-                      "price": _simplePriceController.text,
-                      "stock": _simpleQtyController.text,
-                    });
-                  } else {
-                    for (var size in _sizesList) {
-                      DataStore().addInventoryItem({
-                        "id": DateTime.now().millisecondsSinceEpoch.toString() + size['name']!,
-                        "name": "${_nameController.text} (${size['name']})",
-                        "price": size['price'],
-                        "stock": size['qty'],
-                      });
-                    }
-                  }
-
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        _hasSizes
-                            ? "Item with ${_sizesList.length} sizes Added!"
-                            : "Item Added Successfully!",
-                      ),
-                      backgroundColor: Colors.blue,
-                    ),
-                  );
-                },
+                onPressed: _isSaving ? null : _saveItem, // Disable if saving
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
-                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text(
-                  "CONFIRM & ADD STOCK",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
+                child: _isSaving
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        "SAVE ITEM (AI PROCESSING)",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
             const SizedBox(height: 20),
