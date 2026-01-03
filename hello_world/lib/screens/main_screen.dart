@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'dashboard_screen.dart';
 import 'inventory_screen.dart';
 import 'history_screen.dart';
 import 'expense_screen.dart';
 import 'camera_screen.dart';
-import '../widgets/sell_item_sheet.dart'; // <--- Yeh add karein
+import '../data/inventory_model.dart';
+import '../services/ai_service.dart';
+import '../services/recognition_service.dart';
+import '../widgets/sell_item_sheet.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -32,30 +37,57 @@ class _MainScreenState extends State<MainScreen> {
 
   // Camera kholne ka function (Selling Mode)
   void _openCamera() async {
-    // 1. Camera kholo aur intezar karo (Scanning...)
-    // Humne camera_screen.dart mein logic nahi lagayi thi 'sell' mode ki auto-close ke liye
-    // Isliye filhal hum maante hain user 'X' dabayega ya hum camera logic update karenge.
-    // LEKIN, behtar flow ke liye, chaliye maante hain scan 'true' aaya.
-
     final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const CameraScreen(mode: 'sell')),
     );
 
-    // 2. Agar Scan wapis aaya (User ne back nahi kiya, balki scan complete hua)
-    // Note: CameraScreen mein humein 'sell' mode ke liye bhi auto-close logic lagani padegi
-    // Agar aap chahte hain ke demo mein chal jaye, to hum filhal bina check ke khol dete hain
-
-    if (context.mounted) {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.white,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+    if (result != null && result is File) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("🔍 Identifying Item..."),
+          duration: Duration(milliseconds: 1000),
         ),
-        builder: (context) => SellItemSheet(item: result), // <--- Selling Sheet
       );
+
+      try {
+        // AI Brain se fingerprint lein
+        final embedding = await AIService().getEmbedding(result);
+
+        // Database se items lein
+        final box = Hive.box<InventoryItem>('inventoryBox');
+        final allItems = box.values.toList();
+
+        // Match dhoondo
+        final match = RecognitionService().findMatch(embedding, allItems);
+
+        if (!mounted) return;
+
+        if (match != null) {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.white,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+            ),
+            builder: (context) => SellItemSheet(item: match),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("❌ Item nahi mila! Pehle Add karein."),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        print("Error: $e");
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error Identification: $e")));
+      }
     }
   }
 

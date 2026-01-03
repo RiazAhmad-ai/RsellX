@@ -7,14 +7,19 @@ class RecognitionService {
   factory RecognitionService() => _instance;
   RecognitionService._internal();
 
-  // === MATHS: EUCLIDEAN DISTANCE ===
-  // Do points ke darmiyan faasla napna
-  double _calculateDistance(List<double> embedding1, List<double> embedding2) {
-    double sum = 0.0;
-    for (int i = 0; i < embedding1.length; i++) {
-      sum += pow((embedding1[i] - embedding2[i]), 2);
+  // === MATHS: COSINE SIMILARITY ===
+  // Industry standard for comparing AI embeddings
+  double _calculateSimilarity(List<double> v1, List<double> v2) {
+    double dotProduct = 0.0;
+    double normA = 0.0;
+    double normB = 0.0;
+    for (int i = 0; i < v1.length; i++) {
+      dotProduct += v1[i] * v2[i];
+      normA += v1[i] * v1[i];
+      normB += v2[i] * v2[i];
     }
-    return sqrt(sum);
+    if (normA == 0 || normB == 0) return 0.0;
+    return dotProduct / (sqrt(normA) * sqrt(normB));
   }
 
   // === MAIN LOGIC: FIND MATCH ===
@@ -23,32 +28,30 @@ class RecognitionService {
     List<InventoryItem> allItems,
   ) {
     InventoryItem? bestMatchItem;
-    double lowestDistance = 9999.0;
+    double highestSimilarity = -1.0;
 
-    // Threshold: Agar faasla 0.85 se kam ho tabhi match maano.
-    // Agar galat cheezen match ho rahi hain to isay 0.8 karein.
-    // Agar sahi cheez match nahi ho rahi to 0.9 ya 1.0 karein.
-    double threshold = 0.85;
+    // Threshold: Agora similarity closer to 1.0, means better match.
+    // 0.70 is a good starting point for MobileNetV2 features.
+    // Increase to 0.80 if it matches wrong items too easily.
+    double threshold = 0.70;
 
     for (var item in allItems) {
-      // Har item ke paas multiple angles ki photos ho sakti hain
-      // Hum sabse best angle dhundenge
       for (var savedEmbedding in item.embeddings) {
-        double distance = _calculateDistance(scannedEmbedding, savedEmbedding);
+        double similarity = _calculateSimilarity(scannedEmbedding, savedEmbedding);
 
-        if (distance < lowestDistance) {
-          lowestDistance = distance;
+        if (similarity > highestSimilarity) {
+          highestSimilarity = similarity;
           bestMatchItem = item;
         }
       }
     }
 
-    print("🔎 Closest Match Distance: $lowestDistance");
+    print("🔎 Closest Match Similarity: $highestSimilarity");
 
-    if (lowestDistance < threshold) {
-      return bestMatchItem; // Mubarak ho! Item mil gaya
+    if (highestSimilarity >= threshold) {
+      return bestMatchItem;
     } else {
-      return null; // Koi match nahi mila
+      return null;
     }
   }
 }

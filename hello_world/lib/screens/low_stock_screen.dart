@@ -15,7 +15,7 @@ class _LowStockScreenState extends State<LowStockScreen> {
   Widget build(BuildContext context) {
     // Filter items with stock < 5
     final lowStockItems = DataStore().inventory.where((item) {
-      int stock = Formatter.parseInt(item['stock'].toString());
+      int stock = item.stock;
       return stock < 5;
     }).toList();
 
@@ -56,10 +56,10 @@ class _LowStockScreenState extends State<LowStockScreen> {
                   );
                 }
                 final item = lowStockItems[index - 1];
-                int stock = Formatter.parseInt(item['stock'].toString());
+                int stock = item.stock;
 
                 return _buildLowStockItem(
-                  item['name'],
+                  item.name,
                   "$stock pcs left",
                   stock <= 2,
                 );
