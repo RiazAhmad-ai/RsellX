@@ -1,3 +1,4 @@
+// lib/widgets/sell_item_sheet.dart
 import 'package:flutter/material.dart';
 import '../data/inventory_model.dart';
 import '../data/data_store.dart';
@@ -19,7 +20,6 @@ class _SellItemSheetState extends State<SellItemSheet> {
   @override
   void initState() {
     super.initState();
-    // Shuru mein Sale Price wahi hogi jo Inventory Price hai
     _salePriceController = TextEditingController(
       text: widget.item.price.toInt().toString(),
     );
@@ -38,24 +38,25 @@ class _SellItemSheetState extends State<SellItemSheet> {
         double.tryParse(_salePriceController.text) ?? widget.item.price;
     final double profit = salePrice - widget.item.price;
 
-    // 1. Update Stock
     if (widget.item.stock > 0) {
+      // 1. Stock kam karein
       widget.item.stock--;
       DataStore().updateInventoryItem(widget.item);
 
-      // 2. Add to History
+      // 2. History mein save karein (FIXED: Qty Added)
       DataStore().addHistoryItem({
         'id': DateTime.now().millisecondsSinceEpoch.toString(),
         'itemId': widget.item.id,
         'name': widget.item.name,
-        'price': salePrice, // Woh price jo customer ne di
-        'actualPrice': widget.item.price, // Asal khareed
-        'profit': profit, // Munafa
+        'qty': 1, // <--- YEH LINE ADD KI HAI (Zaroori)
+        'price': salePrice,
+        'actualPrice': widget.item.price,
+        'profit': profit,
         'status': 'Sold',
         'date': DateTime.now().toIso8601String(),
       });
 
-      Navigator.pop(context); // Close sheet
+      Navigator.pop(context);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -85,7 +86,6 @@ class _SellItemSheetState extends State<SellItemSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Row(
             children: [
               Container(
@@ -122,8 +122,6 @@ class _SellItemSheetState extends State<SellItemSheet> {
             ],
           ),
           const SizedBox(height: 24),
-
-          // === ACTUAL PRICE (Read Only) ===
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -152,10 +150,7 @@ class _SellItemSheetState extends State<SellItemSheet> {
               ],
             ),
           ),
-
           const SizedBox(height: 16),
-
-          // === SALE PRICE (Editable) ===
           TextField(
             controller: _salePriceController,
             keyboardType: TextInputType.number,
@@ -181,10 +176,7 @@ class _SellItemSheetState extends State<SellItemSheet> {
               ),
             ),
           ),
-
           const SizedBox(height: 12),
-
-          // === PROFIT DISPLAY ===
           if (_profit != 0)
             Align(
               alignment: Alignment.centerRight,
@@ -208,10 +200,7 @@ class _SellItemSheetState extends State<SellItemSheet> {
                 ),
               ),
             ),
-
           const SizedBox(height: 24),
-
-          // === SELL BUTTON ===
           SizedBox(
             width: double.infinity,
             height: 56,

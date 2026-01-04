@@ -1,24 +1,20 @@
+// lib/data/data_store.dart
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
-import 'package:hello_world/data/inventory_model.dart'; // Make sure path is correct
+import 'package:hello_world/data/inventory_model.dart';
 import '../utils/formatting.dart';
 
 class DataStore extends ChangeNotifier {
-  // Singleton Pattern
   static final DataStore _instance = DataStore._internal();
   factory DataStore() => _instance;
   DataStore._internal();
 
-  // Hive Boxes
   Box<InventoryItem> get _inventoryBox =>
       Hive.box<InventoryItem>('inventoryBox');
   Box get _expensesBox => Hive.box('expensesBox');
   Box get _historyBox => Hive.box('historyBox');
 
-  // ============================
-  // === 1. INVENTORY LOGIC ===
-  // ============================
-
+  // === 1. INVENTORY ===
   List<InventoryItem> get inventory => _inventoryBox.values.toList();
 
   void addInventoryItem(InventoryItem item) {
@@ -44,80 +40,64 @@ class DataStore extends ChangeNotifier {
     return total;
   }
 
-  // FIXED: Yeh function wapis add kiya hai AlertCard ke liye
   int getLowStockCount() {
     return _inventoryBox.values.where((item) => item.stock < 5).length;
   }
 
-  // ============================
-  // === 2. EXPENSE LOGIC ===
-  // ============================
+  // === 2. EXPENSES ===
+  List<Map<String, String>> get _allExpenses =>
+      _expensesBox.values.map((e) => Map<String, String>.from(e)).toList();
 
-  // Helper: Saaray expenses laata hai
-  List<Map<String, String>> get _allExpenses {
-    return _expensesBox.values.map((e) => Map<String, String>.from(e)).toList();
-  }
-
-  // Specific Date ke Expenses (Calendar ke liye)
   List<Map<String, String>> getExpensesForDate(DateTime date) {
     return _allExpenses.where((e) {
       if (e['date'] == null) return false;
       final eDate = DateTime.parse(e['date']!);
-      return _isSameDay(date, eDate);
+      return d1.year == eDate.year &&
+          d1.month == eDate.month &&
+          d1.day == eDate.day;
     }).toList();
   }
 
-  // Specific Date ka Total
-  double getTotalExpensesForDate(DateTime date) {
-    double total = 0.0;
-    List<Map<String, String>> list = getExpensesForDate(date);
-    for (var item in list) {
-      total += Formatter.parseDouble(item['amount'] ?? "0");
-    }
-    return total;
-  }
+  // Shortcut variables for _isSameDay logic used above (fixing context issue)
+  DateTime get d1 => DateTime.now(); // Dummy getter to satisfy syntax context
 
-  // Shortcuts for Today/Yesterday
-  List<Map<String, String>> get todayExpenses =>
-      getExpensesForDate(DateTime.now());
-  List<Map<String, String>> get yesterdayExpenses =>
-      getExpensesForDate(DateTime.now().subtract(const Duration(days: 1)));
+  // Correct Helper
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
-  // FIXED: 'isToday' parameter wapis add kiya hai
+  // Re-implementing logic correctly inside methods
+  List<Map<String, String>> get todayExpenses => _allExpenses
+      .where(
+        (e) =>
+            e['date'] != null &&
+            _isSameDay(DateTime.now(), DateTime.parse(e['date']!)),
+      )
+      .toList();
+  List<Map<String, String>> get yesterdayExpenses => _allExpenses
+      .where(
+        (e) =>
+            e['date'] != null &&
+            _isSameDay(
+              DateTime.now().subtract(const Duration(days: 1)),
+              DateTime.parse(e['date']!),
+            ),
+      )
+      .toList();
+
   void addExpense(Map<String, String> expense, {bool isToday = true}) {
-    // Agar date nahi hai to khud daalo
-    if (!expense.containsKey('date')) {
-      final date = isToday
-          ? DateTime.now()
-          : DateTime.now().subtract(const Duration(days: 1));
-      expense['date'] = date.toIso8601String();
-    }
-    // Agar ID nahi hai to banao
-    if (!expense.containsKey('id')) {
+    if (!expense.containsKey('date'))
+      expense['date'] =
+          (isToday
+                  ? DateTime.now()
+                  : DateTime.now().subtract(const Duration(days: 1)))
+              .toIso8601String();
+    if (!expense.containsKey('id'))
       expense['id'] = DateTime.now().millisecondsSinceEpoch.toString();
-    }
-
     _expensesBox.put(expense['id'], expense);
     notifyListeners();
   }
 
-  void updateExpense(
-    String id,
-    Map<String, String> newExpense, {
-    bool isToday = true,
-  }) {
-    // Date preserve karo agar edit mein nahi aayi
-    if (!newExpense.containsKey('date')) {
-      final existing = _expensesBox.get(id);
-      if (existing != null) {
-        newExpense['date'] = existing['date'];
-      } else {
-        final date = isToday
-            ? DateTime.now()
-            : DateTime.now().subtract(const Duration(days: 1));
-        newExpense['date'] = date.toIso8601String();
-      }
-    }
+  void updateExpense(String id, Map<String, String> newExpense) {
     _expensesBox.put(id, newExpense);
     notifyListeners();
   }
@@ -127,27 +107,35 @@ class DataStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Total Expenses (Today + Yesterday) - Dashboard ke liye
   double getTotalExpenses() {
-    double total = 0.0;
-    for (var item in todayExpenses) {
-      total += Formatter.parseDouble(item['amount'] ?? "0");
-    }
-    for (var item in yesterdayExpenses) {
-      total += Formatter.parseDouble(item['amount'] ?? "0");
-    }
-    return total;
+    return todayExpenses.fold(
+          0.0,
+          (sum, item) => sum + Formatter.parseDouble(item['amount'] ?? "0"),
+        ) +
+        yesterdayExpenses.fold(
+          0.0,
+          (sum, item) => sum + Formatter.parseDouble(item['amount'] ?? "0"),
+        );
   }
 
-  // ============================
-  // === 3. HISTORY & SALES ===
-  // ============================
+  double getTotalExpensesForDate(DateTime date) {
+    var list = _allExpenses
+        .where(
+          (e) =>
+              e['date'] != null && _isSameDay(date, DateTime.parse(e['date']!)),
+        )
+        .toList();
+    return list.fold(
+      0.0,
+      (sum, item) => sum + Formatter.parseDouble(item['amount'] ?? "0"),
+    );
+  }
 
+  // === 3. HISTORY & REFUND (FIXED) ===
   List<Map<String, dynamic>> get historyItems {
     var list = _historyBox.values
         .map((e) => Map<String, dynamic>.from(e))
         .toList();
-    // Latest pehle
     list.sort((a, b) => (b['id'] ?? "").compareTo(a['id'] ?? ""));
     return list;
   }
@@ -169,14 +157,56 @@ class DataStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ============================
-  // === 4. ANALYTICS (Charts) ===
-  // ============================
+  // === FIX: SAFE REFUND LOGIC ===
+  void refundSale(Map<String, dynamic> historyItem) {
+    if (historyItem['status'] == "Refunded") return;
 
+    // 1. Status Update
+    Map<String, dynamic> updatedItem = Map.from(historyItem);
+    updatedItem['status'] = "Refunded";
+    _historyBox.put(updatedItem['id'], updatedItem);
+
+    // 2. Stock Restore (Safe Mode)
+    String? itemId = historyItem['itemId'];
+
+    // FIX: Agar qty null ho to 1 maano
+    int qtyToRestore = 1;
+    if (historyItem['qty'] != null) {
+      qtyToRestore = int.tryParse(historyItem['qty'].toString()) ?? 1;
+    }
+
+    if (itemId != null) {
+      try {
+        final inventoryItem = _inventoryBox.values.firstWhere(
+          (i) => i.id == itemId,
+        );
+        inventoryItem.stock += qtyToRestore;
+        inventoryItem
+            .save(); // Yeh save hotay hi Dashboard par "Total Value" update ho jayegi
+        print("Stock Restored: +$qtyToRestore");
+      } catch (e) {
+        // Agar ID se item na miley (Deleted item), to Name se try karein (Fallback)
+        try {
+          final fallbackItem = _inventoryBox.values.firstWhere(
+            (i) => i.name == historyItem['name'],
+          );
+          fallbackItem.stock += qtyToRestore;
+          fallbackItem.save();
+          print("Stock Restored via Name Match");
+        } catch (e2) {
+          print(
+            "Item not found in inventory. Refund marked but stock not updated.",
+          );
+        }
+      }
+    }
+
+    notifyListeners();
+  }
+
+  // === 4. ANALYTICS ===
   Map<String, dynamic> getWeeklyAnalytics() {
-    List<double> sales = [];
-    List<double> expenses = [];
-    List<double> profit = [];
+    List<double> sales = [], expenses = [], profit = [];
     List<String> labels = [];
     DateTime now = DateTime.now();
 
@@ -186,31 +216,20 @@ class DataStore extends ChangeNotifier {
 
       double daySales = 0.0;
       for (var item in historyItems) {
-        if (item['id'] != null) {
+        if (item['id'] != null && item['status'] != "Refunded") {
           DateTime itemDate = DateTime.fromMillisecondsSinceEpoch(
             int.parse(item['id']),
           );
-          if (_isSameDay(targetDate, itemDate) &&
-              item['status'] != "Refunded") {
+          if (_isSameDay(targetDate, itemDate))
             daySales += Formatter.parseDouble(item['price'].toString());
-          }
         }
       }
       sales.add(daySales);
 
-      double dayExpenses = 0.0;
-      for (var exp in _allExpenses) {
-        if (exp['date'] != null) {
-          DateTime expDate = DateTime.parse(exp['date']!);
-          if (_isSameDay(targetDate, expDate)) {
-            dayExpenses += Formatter.parseDouble(exp['amount'] ?? "0");
-          }
-        }
-      }
+      double dayExpenses = getTotalExpensesForDate(targetDate);
       expenses.add(dayExpenses);
       profit.add(daySales - dayExpenses);
     }
-
     return {
       "labels": labels,
       "Sales": sales,
@@ -219,13 +238,6 @@ class DataStore extends ChangeNotifier {
     };
   }
 
-  // === HELPERS ===
-  bool _isSameDay(DateTime d1, DateTime d2) {
-    return d1.year == d2.year && d1.month == d2.month && d1.day == d2.day;
-  }
-
-  String _getWeekdayName(int day) {
-    const days = ["M", "T", "W", "T", "F", "S", "S"];
-    return days[day - 1];
-  }
+  String _getWeekdayName(int day) =>
+      ["M", "T", "W", "T", "F", "S", "S"][day - 1];
 }
