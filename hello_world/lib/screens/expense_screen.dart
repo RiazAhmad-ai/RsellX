@@ -13,7 +13,7 @@ class ExpenseScreen extends StatefulWidget {
 
 class _ExpenseScreenState extends State<ExpenseScreen> {
   // 1. STATE VARIABLES
-  DateTime _selectedDate = DateTime.now();
+  DateTime _selectedDate = DateTime.now(); // By default Aaj ki date
   String _selectedCategory = "All";
   final List<String> categories = ["Food", "Bills", "Rent", "Travel", "Extra"];
 
@@ -30,39 +30,37 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
   }
 
   void _onDataChange() {
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   // === FUNCTIONS ===
 
-  void _deleteItem(String id, bool isToday) {
-    DataStore().deleteExpense(id, isToday: isToday);
+  void _deleteItem(String id) {
+    DataStore().deleteExpense(id); // Simplified delete
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text("Expense Deleted")));
   }
 
-  // === EDIT FEATURE (New Function) ===
+  // === EDIT FEATURE ===
   void _showEditSheet(Map<String, String> item) {
-    // Purana data controllers mein bhara
     TextEditingController amountController = TextEditingController(
       text: item['amount'],
     );
     TextEditingController titleController = TextEditingController(
       text: item['title'],
     );
-    String currentCategory = item['category']!;
+    String currentCategory = item['category'] ?? "Extra";
 
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // Full screen keyboard ke liye
+      isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
       builder: (context) {
         return StatefulBuilder(
-          // Sheet ke andar state badalne ke liye
           builder: (context, setModalState) {
             return Padding(
               padding: EdgeInsets.only(
@@ -73,9 +71,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Handle
                   Container(
                     width: 40,
                     height: 4,
@@ -85,23 +81,14 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-
                   const Text(
                     "EDIT EXPENSE",
                     style: TextStyle(
-                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: Colors.blue,
-                      letterSpacing: 1,
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  // 1. AMOUNT INPUT
-                  const Text(
-                    "Update Amount",
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -123,7 +110,6 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                           style: const TextStyle(
                             fontWeight: FontWeight.w900,
                             fontSize: 40,
-                            color: Colors.black,
                           ),
                           decoration: const InputDecoration(
                             border: InputBorder.none,
@@ -134,8 +120,6 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                   ),
                   const Divider(),
                   const SizedBox(height: 20),
-
-                  // 2. TITLE INPUT
                   TextFormField(
                     controller: titleController,
                     decoration: InputDecoration(
@@ -153,31 +137,14 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  // 3. CATEGORY SELECT
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      "CHANGE CATEGORY",
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: categories.map((cat) {
                         bool isSelected = currentCategory == cat;
                         return GestureDetector(
-                          onTap: () {
-                            setModalState(() {
-                              currentCategory = cat;
-                            });
-                          },
+                          onTap: () =>
+                              setModalState(() => currentCategory = cat),
                           child: Container(
                             margin: const EdgeInsets.only(right: 10),
                             padding: const EdgeInsets.symmetric(
@@ -195,7 +162,6 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                               style: TextStyle(
                                 color: isSelected ? Colors.white : Colors.black,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 12,
                               ),
                             ),
                           ),
@@ -204,28 +170,17 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                     ),
                   ),
                   const SizedBox(height: 30),
-
-                  // 4. UPDATE BUTTON
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                         // Decide if today or yesterday based on where it came from
-                         // For simplicity, we assume we update in place.
-                         // But wait, `item` is a reference to the map in the list IF we passed it directly.
-                         // BUT `DataStore` returns unmodifiable lists. So we must use `updateExpense`.
-                         // We need to know if it is today or yesterday.
-                         // A simple hack: check if id exists in today list.
-                         bool isToday = DataStore().todayExpenses.any((element) => element['id'] == item['id']);
+                        Map<String, String> updatedItem = Map.from(item);
+                        updatedItem['amount'] = amountController.text;
+                        updatedItem['title'] = titleController.text;
+                        updatedItem['category'] = currentCategory;
 
-                         Map<String, String> updatedItem = Map.from(item);
-                         updatedItem['amount'] = amountController.text;
-                         updatedItem['title'] = titleController.text;
-                         updatedItem['category'] = currentCategory;
-
-                        DataStore().updateExpense(item['id']!, updatedItem, isToday: isToday);
-
-                        Navigator.pop(context); // Sheet Band
+                        DataStore().updateExpense(item['id']!, updatedItem);
+                        Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text("Expense Updated!"),
@@ -234,18 +189,14 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue, // Blue for Edit
+                        backgroundColor: Colors.blue,
                         padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
                       ),
                       child: const Text(
                         "UPDATE EXPENSE",
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
                         ),
                       ),
                     ),
@@ -259,18 +210,15 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
       },
     );
   }
-  // =================================
 
+  // === FILTERING ===
   List<Map<String, String>> _getFilteredList(
     List<Map<String, String>> originalList,
   ) {
-    if (_selectedCategory == "All") {
-      return originalList;
-    } else {
-      return originalList
-          .where((item) => item['category'] == _selectedCategory)
-          .toList();
-    }
+    if (_selectedCategory == "All") return originalList;
+    return originalList
+        .where((item) => item['category'] == _selectedCategory)
+        .toList();
   }
 
   Future<void> _pickDate() async {
@@ -297,40 +245,22 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
       setState(() {
         _selectedDate = picked;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Showing expenses for ${_getMonthName(picked.month)}"),
-        ),
-      );
     }
   }
 
-  String _getMonthName(int month) {
-    const months = [
-      "JAN",
-      "FEB",
-      "MAR",
-      "APR",
-      "MAY",
-      "JUN",
-      "JUL",
-      "AUG",
-      "SEP",
-      "OCT",
-      "NOV",
-      "DEC",
-    ];
-    return months[month - 1];
+  String _formatDate(DateTime date) {
+    return "${date.day}/${date.month}/${date.year}";
   }
 
   @override
   Widget build(BuildContext context) {
-    final filteredToday = _getFilteredList(DataStore().todayExpenses);
-    final filteredYesterday = _getFilteredList(DataStore().yesterdayExpenses);
-    final totalSpent = DataStore().getTotalExpenses();
+    // 1. Get Data for SELECTED DATE ONLY
+    final expensesForDate = DataStore().getExpensesForDate(_selectedDate);
+    final filteredList = _getFilteredList(expensesForDate);
+    final totalSpent = DataStore().getTotalExpensesForDate(_selectedDate);
 
-    String currentMonthName = _getMonthName(_selectedDate.month);
-    String currentYear = _selectedDate.year.toString();
+    String displayDate = _formatDate(_selectedDate);
+    bool isToday = _formatDate(DateTime.now()) == displayDate;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -391,7 +321,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        "TOTAL SPENT ($currentMonthName $currentYear)",
+                        "TOTAL SPENT (${isToday ? "TODAY" : displayDate})",
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 10,
@@ -418,7 +348,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    "Rs ${Formatter.formatCurrency(totalSpent)}", // Dynamic Total
+                    "Rs ${Formatter.formatCurrency(totalSpent)}",
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 40,
@@ -436,51 +366,36 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 children: [
-                  _buildFilterChip("All"),
-                  _buildFilterChip("Food"),
-                  _buildFilterChip("Bills"),
-                  _buildFilterChip("Rent"),
-                  _buildFilterChip("Travel"),
-                  _buildFilterChip("Extra"),
-                ],
+                  "All",
+                  "Food",
+                  "Bills",
+                  "Rent",
+                  "Travel",
+                  "Extra",
+                ].map((cat) => _buildFilterChip(cat)).toList(),
               ),
             ),
             const SizedBox(height: 30),
 
-            // LISTS
-            if (filteredToday.isNotEmpty) ...[
-              _buildDateHeader("TODAY"),
-              ...filteredToday.map((item) => _buildSwipeableItem(item, true)),
-              const SizedBox(height: 20),
-            ],
-
-            if (filteredYesterday.isNotEmpty) ...[
-              _buildDateHeader("YESTERDAY"),
-              ...filteredYesterday.map(
-                (item) => _buildSwipeableItem(item, false),
-              ),
-            ],
-
-            if (filteredToday.isEmpty && filteredYesterday.isEmpty)
+            // LIST (Single List based on Date)
+            if (filteredList.isNotEmpty) ...[
+              _buildDateHeader(isToday ? "TODAY" : displayDate),
+              ...filteredList.map((item) => _buildSwipeableItem(item)),
+              const SizedBox(height: 80),
+            ] else
               Padding(
                 padding: const EdgeInsets.all(40.0),
                 child: Column(
                   children: [
-                    Icon(
-                      Icons.filter_list_off,
-                      size: 50,
-                      color: Colors.grey[300],
-                    ),
+                    Icon(Icons.event_busy, size: 50, color: Colors.grey[300]),
                     const SizedBox(height: 10),
                     Text(
-                      "No expenses found",
+                      "No expenses for $displayDate",
                       style: TextStyle(color: Colors.grey[400]),
                     ),
                   ],
                 ),
               ),
-
-            const SizedBox(height: 80),
           ],
         ),
       ),
@@ -508,54 +423,33 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
     );
   }
 
-  Widget _buildSwipeableItem(Map<String, String> item, bool isToday) {
+  Widget _buildSwipeableItem(Map<String, String> item) {
     return Dismissible(
       key: Key(item['id']!),
       direction: DismissDirection.endToStart,
       confirmDismiss: (direction) async {
         return await showDialog(
           context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+          builder: (context) => AlertDialog(
+            title: const Text("Delete Expense?"),
+            content: const Text("Confirm delete?"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text("Cancel"),
               ),
-              title: const Text(
-                "Delete Expense?",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              content: const Text(
-                "Kya aap waqai is kharchay ko delete karna chahte hain?",
-              ),
-              actions: <Widget>[
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text(
-                    "Cancel",
-                    style: TextStyle(color: Colors.grey),
-                  ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text(
+                  "DELETE",
+                  style: TextStyle(color: Colors.red),
                 ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text(
-                    "DELETE",
-                    style: TextStyle(
-                      color: Colors.red,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
+              ),
+            ],
+          ),
         );
       },
-      onDismissed: (direction) {
-        _deleteItem(item['id']!, isToday);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Expense Deleted")));
-      },
+      onDismissed: (_) => _deleteItem(item['id']!),
       background: Container(
         margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
         decoration: BoxDecoration(
@@ -566,13 +460,8 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
         padding: const EdgeInsets.only(right: 20),
         child: const Icon(Icons.delete, color: Colors.red),
       ),
-
-      // === TAP TO EDIT FEATURE ===
       child: GestureDetector(
-        onTap: () {
-          // Tap karne par Edit Sheet khulegi
-          _showEditSheet(item);
-        },
+        onTap: () => _showEditSheet(item),
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
           padding: const EdgeInsets.all(16),
@@ -595,11 +484,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                   color: Colors.grey[100],
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.edit,
-                  color: Colors.blue,
-                  size: 18,
-                ), // Icon change kiya Edit feel ke liye
+                child: const Icon(Icons.edit, color: Colors.blue, size: 18),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -624,22 +509,12 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                   ],
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    "Rs ${item['amount']!}",
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w900,
-                      color: Colors.black,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const Text(
-                    "Tap to edit",
-                    style: TextStyle(color: Colors.grey, fontSize: 8),
-                  ),
-                ],
+              Text(
+                "Rs ${item['amount']!}",
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 14,
+                ),
               ),
             ],
           ),
@@ -651,11 +526,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
   Widget _buildFilterChip(String label) {
     bool isActive = _selectedCategory == label;
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedCategory = label;
-        });
-      },
+      onTap: () => setState(() => _selectedCategory = label),
       child: Container(
         margin: const EdgeInsets.only(right: 10),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
