@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:camera/camera.dart'; // Camera package
-import 'screens/splash_screen.dart';
-import 'data/inventory_model.dart'; // Humara naya model
-import 'services/ai_service.dart'; // Humara AI Brain
+import 'features/splash/splash_screen.dart';
+import 'data/models/inventory_model.dart';
+import 'services/ai_service.dart';
 
 // Global Variable taake camera puri app mein mile
 late List<CameraDescription> cameras;
@@ -31,6 +31,7 @@ Future<void> main() async {
   await Hive.openBox<InventoryItem>('inventoryBox');
   await Hive.openBox('expensesBox'); // Box for Expenses (List of Maps)
   await Hive.openBox('historyBox');  // Box for History (List of Maps)
+  await Hive.openBox('settingsBox'); // Box for Business Profile & Settings
 
   // 3. Load AI Model
   await AIService().loadModel();
@@ -45,7 +46,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'RIAZ AHMAD CROCKERY',
+      title: 'Retail POS System',
       theme: ThemeData(
         primarySwatch: Colors.red,
         scaffoldBackgroundColor: Colors.white,

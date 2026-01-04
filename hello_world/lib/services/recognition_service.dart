@@ -1,5 +1,5 @@
 import 'dart:math';
-import '../data/inventory_model.dart';
+import '../data/models/inventory_model.dart';
 
 class RecognitionService {
   // Singleton
