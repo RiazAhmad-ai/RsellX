@@ -50,9 +50,9 @@ class _AddItemSheetState extends State<AddItemSheet> {
 
   // === 3. FINAL SAVE LOGIC (JADOO YAHAN HAI) ===
   Future<void> _saveItem() async {
-    if (_nameController.text.isEmpty || _priceController.text.isEmpty) {
+    if (_priceController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Name and Price are required!")),
+        const SnackBar(content: Text("Price is required!")),
       );
       return;
     }
@@ -77,9 +77,10 @@ class _AddItemSheetState extends State<AddItemSheet> {
       }
 
       // B. Create Data Object
+      final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
       final newItem = InventoryItem(
-        id: DateTime.now().millisecondsSinceEpoch.toString(), // Unique ID
-        name: _nameController.text,
+        id: timestamp, // Unique ID
+        name: _nameController.text.trim().isEmpty ? "Product #${timestamp.substring(timestamp.length - 4)}" : _nameController.text.trim(),
         price: double.tryParse(_priceController.text) ?? 0.0,
         stock: int.tryParse(_stockController.text) ?? 0,
         description: _descController.text,
@@ -149,7 +150,8 @@ class _AddItemSheetState extends State<AddItemSheet> {
             TextField(
               controller: _nameController,
               decoration: InputDecoration(
-                labelText: "Item Name",
+                labelText: "Item Name (Optional)",
+                hintText: "Recognition works by photos",
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

@@ -139,10 +139,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final filteredList = DataStore().historyItems.where((item) {
       DateTime itemDate = _parseDate(item['date']);
       bool dateMatches = _isSameDay(itemDate, _selectedDate);
-      final name = item['name'] ?? item['item'] ?? "";
-      bool searchMatches = name.toString().toLowerCase().contains(
-        _searchQuery.toLowerCase(),
-      );
+      final name = (item['name'] ?? item['item'] ?? "").toString().toLowerCase();
+      final price = (item['price']?.toString() ?? "").toLowerCase();
+      final query = _searchQuery.toLowerCase();
+
+      bool searchMatches = name.contains(query) || price.contains(query);
       return dateMatches && searchMatches;
     }).toList();
 

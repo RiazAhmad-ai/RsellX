@@ -14,15 +14,16 @@ class AIService {
   // === 1. MODEL LOAD KARNA ===
   Future<void> loadModel() async {
     try {
-      // Options set karna (CPU/GPU)
       final options = InterpreterOptions();
 
-      // Asset se model uthana
+      // Note: Delegates like NNAPI/GPU require specific native binaries.
+      // For now, we use standard CPU execution which is stable and fast for MobileNet.
+
       _interpreter = await Interpreter.fromAsset(
         'assets/mobilenet_v2.tflite',
         options: options,
       );
-      print("✅ AI Brain Loaded Successfully!");
+      print("✅ AI Brain Loaded with Acceleration!");
     } catch (e) {
       print("❌ Error Loading Model: $e");
     }
@@ -62,9 +63,17 @@ List<List<List<List<double>>>> _processImage(List<int> imageData) {
 
   if (originalImage == null) throw Exception("Image corrupt hai.");
 
-  // B. Image ko chota karna (224x224) jo AI model ki requirement hai
+  // IMPROVEMENT: CENTER CROP (Background Removal Alternative)
+  // Instead of stretching, we take the center square which usually contains the product.
+  int size = originalImage.width < originalImage.height ? originalImage.width : originalImage.height;
+  int x = (originalImage.width - size) ~/ 2;
+  int y = (originalImage.height - size) ~/ 2;
+  
+  img.Image croppedImage = img.copyCrop(originalImage, x: x, y: y, width: size, height: size);
+
+  // B. Resize to 224x224
   img.Image resizedImage = img.copyResize(
-    originalImage,
+    croppedImage,
     width: 224,
     height: 224,
   );

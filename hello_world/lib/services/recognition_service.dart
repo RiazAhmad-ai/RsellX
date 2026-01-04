@@ -31,26 +31,32 @@ class RecognitionService {
     double highestSimilarity = -1.0;
 
     // Threshold: Agora similarity closer to 1.0, means better match.
-    // 0.70 is a good starting point for MobileNetV2 features.
-    // Increase to 0.80 if it matches wrong items too easily.
-    double threshold = 0.70;
+    // 0.75 is a more precise threshold for MobileNetV2 features.
+    double threshold = 0.75;
 
     for (var item in allItems) {
+      double itemMaxSimilarity = -1.0;
+      
       for (var savedEmbedding in item.embeddings) {
         double similarity = _calculateSimilarity(scannedEmbedding, savedEmbedding);
-
-        if (similarity > highestSimilarity) {
-          highestSimilarity = similarity;
-          bestMatchItem = item;
+        if (similarity > itemMaxSimilarity) {
+          itemMaxSimilarity = similarity;
         }
+      }
+
+      if (itemMaxSimilarity > highestSimilarity) {
+        highestSimilarity = itemMaxSimilarity;
+        bestMatchItem = item;
       }
     }
 
-    print("🔎 Closest Match Similarity: $highestSimilarity");
+    print("🔎 Detection Confidence: ${(highestSimilarity * 100).toStringAsFixed(1)}%");
 
     if (highestSimilarity >= threshold) {
       return bestMatchItem;
     } else {
+      // Fallback: If similarity is borderline (0.65 - 0.75), maybe return but warn?
+      // For now, strict threshold for accuracy.
       return null;
     }
   }
