@@ -37,44 +37,52 @@ class _SellItemSheetState extends State<SellItemSheet> {
     });
   }
 
-  void _confirmSell() {
+  void _addToCart() {
     final double salePrice =
         double.tryParse(_salePriceController.text) ?? widget.item.price;
-    final double profit = (salePrice - widget.item.price) * _sellQty;
 
-    if (widget.item.stock >= _sellQty) {
-      // 1. Decrease Stock
-      widget.item.stock -= _sellQty;
-      DataStore().updateInventoryItem(widget.item);
-
-      // 2. Save Item to History
+    if (widget.item.stock >= _sellQty && _salePriceController.text.isNotEmpty) {
       final sale = SaleRecord(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: "sale_${DateTime.now().millisecondsSinceEpoch}",
         itemId: widget.item.id,
         name: widget.item.name,
         price: salePrice,
         actualPrice: widget.item.price,
         qty: _sellQty,
-        profit: profit,
+        profit: (salePrice - widget.item.price) * _sellQty,
         date: DateTime.now(),
-        status: 'Sold',
       );
-      DataStore().addHistoryItem(sale);
 
-      Navigator.pop(context);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "Sold $_sellQty items for Rs ${Formatter.formatCurrency(salePrice * _sellQty)} ✅",
-          ),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      DataStore().addToCart(sale);
+      Navigator.pop(context, "ADD_MORE");
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Not enough stock available!")),
+        const SnackBar(content: Text("Please enter a valid sale price")),
+      );
+    }
+  }
+
+  void _confirmSell() {
+    final double salePrice =
+        double.tryParse(_salePriceController.text) ?? widget.item.price;
+
+    if (widget.item.stock >= _sellQty && _salePriceController.text.isNotEmpty) {
+      final sale = SaleRecord(
+        id: "sale_${DateTime.now().millisecondsSinceEpoch}",
+        itemId: widget.item.id,
+        name: widget.item.name,
+        price: salePrice,
+        actualPrice: widget.item.price,
+        qty: _sellQty,
+        profit: (salePrice - widget.item.price) * _sellQty,
+        date: DateTime.now(),
+      );
+
+      DataStore().addToCart(sale);
+      Navigator.pop(context, "VIEW_CART");
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter a valid sale price")),
       );
     }
   }
@@ -276,24 +284,48 @@ class _SellItemSheetState extends State<SellItemSheet> {
               ),
             ),
           const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ElevatedButton(
-              onPressed: widget.item.stock > 0 ? _confirmSell : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.secondary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 56,
+                  child: OutlinedButton(
+                    onPressed: widget.item.stock > 0 ? _addToCart : null,
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.secondary, width: 2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: const Text(
+                      "ADD TO CART",
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.secondary),
+                    ),
+                  ),
                 ),
-                elevation: 0,
               ),
-              child: const Text(
-                "CONFIRM SELL",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: widget.item.stock > 0 ? _confirmSell : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.secondary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      "CHECKOUT",
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),

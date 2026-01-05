@@ -9,6 +9,8 @@ import '../inventory/sell_item_sheet.dart';
 import '../../shared/widgets/full_scanner_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../cart/cart_screen.dart';
+import '../../data/repositories/data_store.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -50,7 +52,7 @@ class _MainScreenState extends State<MainScreen> {
       final match = box.values.firstWhere((item) => item.barcode == barcode);
       
       if (!mounted) return;
-      showModalBottomSheet(
+      final result = await showModalBottomSheet<String>(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.white,
@@ -59,6 +61,17 @@ class _MainScreenState extends State<MainScreen> {
         ),
         builder: (context) => SellItemSheet(item: match),
       );
+
+      if (result == "ADD_MORE") {
+        // Re-open scanner automatically
+        _openBarcodeScanner();
+      } else if (result == "VIEW_CART") {
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const CartScreen()),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -76,16 +89,43 @@ class _MainScreenState extends State<MainScreen> {
       body: _screens[_selectedIndex],
 
       // Floating Barcode Scanner Button
-      floatingActionButton: SizedBox(
-        height: 65,
-        width: 65,
-        child: FloatingActionButton(
-          onPressed: _openBarcodeScanner,
-          backgroundColor: AppColors.accent,
-          shape: const CircleBorder(),
-          elevation: 4,
-          child: const Icon(Icons.qr_code_scanner, size: 30, color: Colors.white),
-        ),
+      floatingActionButton: ListenableBuilder(
+        listenable: DataStore(),
+        builder: (context, _) {
+          final cartCount = DataStore().cart.length;
+          return SizedBox(
+            height: 65,
+            width: 65,
+            child: FloatingActionButton(
+              onPressed: _openBarcodeScanner,
+              backgroundColor: AppColors.accent,
+              shape: const CircleBorder(),
+              elevation: 4,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(Icons.qr_code_scanner, size: 30, color: Colors.white),
+                  if (cartCount > 0)
+                    Positioned(
+                      top: -10,
+                      right: -10,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          "$cartCount",
+                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
 

@@ -55,6 +55,7 @@ Future<void> _migrateData() async {
           profit: (value['profit'] as num?)?.toDouble() ?? 0.0,
           date: DateTime.tryParse(value['date']?.toString() ?? "") ?? DateTime.now(),
           status: value['status']?.toString() ?? "Sold",
+          billId: value['billId']?.toString(),
         );
         await historyBox.put(key, sale);
       } catch (e) {

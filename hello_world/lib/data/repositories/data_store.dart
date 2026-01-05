@@ -415,4 +415,49 @@ class DataStore extends ChangeNotifier {
     // settingsBox stays to keep shop name, unless explicitly reset
     notifyListeners();
   }
+
+  // === 7. CART SYSTEM (IN-MEMORY) ===
+  final List<SaleRecord> _cart = [];
+  List<SaleRecord> get cart => List.unmodifiable(_cart);
+
+  void addToCart(SaleRecord item) {
+    _cart.add(item);
+    notifyListeners();
+  }
+
+  void removeFromCart(int index) {
+    if (index >= 0 && index < _cart.length) {
+      _cart.removeAt(index);
+      notifyListeners();
+    }
+  }
+
+  void clearCart() {
+    _cart.clear();
+    notifyListeners();
+  }
+
+  double get cartTotal => _cart.fold(0, (sum, item) => sum + (item.price * item.qty));
+  int get cartCount => _cart.fold(0, (sum, item) => sum + item.qty);
+
+  Future<void> checkoutCart() async {
+    final String billId = "bill_${DateTime.now().millisecondsSinceEpoch}";
+    
+    for (var item in _cart) {
+      item.billId = billId;
+      // 1. Save to History
+      _historyBox.put(item.id, item);
+
+      // 2. Adjust Stock
+      try {
+        final invItem = _inventoryBox.values.firstWhere((i) => i.id == item.itemId);
+        invItem.stock -= item.qty;
+        invItem.save();
+      } catch (e) {
+        print("Stock update failed for cart item ${item.name}: $e");
+      }
+    }
+    _cart.clear();
+    notifyListeners();
+  }
 }

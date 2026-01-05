@@ -219,6 +219,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
       }
     }
 
+    // Grouping by Bill ID
+    final Map<String, List<SaleRecord>> groupedSales = {};
+    final List<String> billOrder = [];
+
+    for (var item in filteredHistory) {
+      final key = item.billId ?? item.id;
+      if (!groupedSales.containsKey(key)) {
+        groupedSales[key] = [];
+        billOrder.add(key);
+      }
+      groupedSales[key]!.add(item);
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
@@ -338,8 +351,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ),
           ),
 
-          // 3. History List
-          filteredHistory.isEmpty
+          // 3. History List (Grouped)
+          billOrder.isEmpty
               ? SliverFillRemaining(
                   child: Center(
                     child: Column(
@@ -357,15 +370,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
-                        final item = filteredHistory[index];
-                        return _HistoryItemCard(
-                          item: item,
-                          onRefund: () => _handleRefund(item),
-                          onDelete: () => _handleDelete(item.id),
-                          onEdit: () => _handleEdit(item),
+                        final billId = billOrder[index];
+                        final items = groupedSales[billId]!;
+                        return _BillCard(
+                          billId: billId,
+                          items: items,
+                          onRefund: (item) => _handleRefund(item),
+                          onDelete: (id) => _handleDelete(id),
+                          onEdit: (item) => _handleEdit(item),
                         );
                       },
-                      childCount: filteredHistory.length,
+                      childCount: billOrder.length,
                     ),
                   ),
                 ),
@@ -377,14 +392,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 }
 
-class _HistoryItemCard extends StatelessWidget {
-  final SaleRecord item;
-  final VoidCallback onRefund;
-  final VoidCallback onDelete;
-  final VoidCallback onEdit;
+class _BillCard extends StatelessWidget {
+  final String billId;
+  final List<SaleRecord> items;
+  final Function(SaleRecord) onRefund;
+  final Function(String) onDelete;
+  final Function(SaleRecord) onEdit;
 
-  const _HistoryItemCard({
-    required this.item,
+  const _BillCard({
+    required this.billId,
+    required this.items,
     required this.onRefund,
     required this.onDelete,
     required this.onEdit,
@@ -392,8 +409,19 @@ class _HistoryItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    bool isRefunded = item.status == "Refunded";
-    double total = item.price * item.qty;
+    double billTotal = 0;
+    double billProfit = 0;
+    int totalQty = 0;
+    bool allRefunded = true;
+
+    for (var item in items) {
+      if (item.status != "Refunded") {
+        billTotal += (item.price * item.qty);
+        billProfit += item.profit;
+        allRefunded = false;
+      }
+      totalQty += item.qty;
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -412,12 +440,12 @@ class _HistoryItemCard extends StatelessWidget {
             leading: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: isRefunded ? AppColors.error.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
+                color: allRefunded ? AppColors.error.withOpacity(0.1) : AppColors.secondary.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                isRefunded ? Icons.keyboard_return : Icons.shopping_bag_outlined,
-                color: isRefunded ? AppColors.error : AppColors.success,
+                allRefunded ? Icons.keyboard_return : Icons.receipt_long_outlined,
+                color: allRefunded ? AppColors.error : AppColors.secondary,
                 size: 20,
               ),
             ),
@@ -425,14 +453,14 @@ class _HistoryItemCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    item.name,
+                    items.length > 1 ? "Multiple Items (${items.length})" : items.first.name,
                     style: AppTextStyles.bodyLarge.copyWith(
                       fontWeight: FontWeight.bold,
-                      decoration: isRefunded ? TextDecoration.lineThrough : null,
+                      decoration: allRefunded ? TextDecoration.lineThrough : null,
                     ),
                   ),
                 ),
-                if (isRefunded)
+                if (allRefunded)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(5)),
@@ -441,7 +469,7 @@ class _HistoryItemCard extends StatelessWidget {
               ],
             ),
             subtitle: Text(
-              "${item.qty} x Rs ${Formatter.formatCurrency(item.price)}",
+              "Total Qty: $totalQty • ${_formatTime(items.first.date)}",
               style: AppTextStyles.bodySmall,
             ),
             trailing: Column(
@@ -449,51 +477,137 @@ class _HistoryItemCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  "Rs ${Formatter.formatCurrency(total)}",
+                  "Rs ${Formatter.formatCurrency(billTotal)}",
                   style: AppTextStyles.bodyLarge.copyWith(
                     fontWeight: FontWeight.w900,
-                    color: isRefunded ? AppColors.error : AppColors.textPrimary,
+                    color: allRefunded ? AppColors.error : AppColors.primary,
                   ),
                 ),
-                if (!isRefunded)
+                if (!allRefunded)
                   Text(
-                    item.profit >= 0 ? "+Rs ${Formatter.formatCurrency(item.profit)}" : "-Rs ${Formatter.formatCurrency(item.profit.abs())}",
-                    style: AppTextStyles.label.copyWith(color: item.profit >= 0 ? AppColors.success : AppColors.error),
+                    billProfit >= 0 ? "+Rs ${Formatter.formatCurrency(billProfit)}" : "-Rs ${Formatter.formatCurrency(billProfit.abs())}",
+                    style: AppTextStyles.label.copyWith(color: billProfit >= 0 ? AppColors.success : AppColors.error, fontSize: 10),
                   ),
               ],
             ),
             children: [
-              const Divider(height: 1, indent: 20, endIndent: 20),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+              const Divider(height: 1, color: Color(0xFFF1F5F9)),
+              ...items.map((item) => _IndividualItemRow(
+                item: item,
+                onRefund: () => onRefund(item),
+                onDelete: () => onDelete(item.id),
+                onEdit: () => onEdit(item),
+              )),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatTime(DateTime date) {
+    return "${date.hour % 12 == 0 ? 12 : date.hour % 12}:${date.minute.toString().padLeft(2, '0')} ${date.hour >= 12 ? 'PM' : 'AM'}";
+  }
+}
+
+class _IndividualItemRow extends StatelessWidget {
+  final SaleRecord item;
+  final VoidCallback onRefund;
+  final VoidCallback onDelete;
+  final VoidCallback onEdit;
+
+  const _IndividualItemRow({
+    required this.item,
+    required this.onRefund,
+    required this.onDelete,
+    required this.onEdit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    bool isRefunded = item.status == "Refunded";
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (!isRefunded)
-                      _ActionButton(
-                        icon: Icons.settings_backup_restore,
-                        label: "REFUND",
-                        color: AppColors.warning,
-                        onTap: onRefund,
+                    Text(
+                      item.name,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        decoration: isRefunded ? TextDecoration.lineThrough : null,
+                        color: isRefunded ? Colors.grey : Colors.black87,
                       ),
-                    _ActionButton(
-                      icon: Icons.edit_outlined,
-                      label: "EDIT",
-                      color: AppColors.accent,
-                      onTap: onEdit,
                     ),
-                    _ActionButton(
-                      icon: Icons.delete_outline,
-                      label: "DELETE",
-                      color: AppColors.error,
-                      onTap: onDelete,
+                    Text(
+                      "${item.qty} x Rs ${Formatter.formatCurrency(item.price)}",
+                      style: TextStyle(color: Colors.grey[600], fontSize: 11),
                     ),
                   ],
                 ),
               ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    "Rs ${Formatter.formatCurrency(item.price * item.qty)}",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: isRefunded ? Colors.red : Colors.black,
+                    ),
+                  ),
+                  if (!isRefunded)
+                    Text(
+                      "+Rs ${Formatter.formatCurrency(item.profit)}",
+                      style: TextStyle(color: AppColors.success, fontSize: 10),
+                    ),
+                ],
+              ),
             ],
           ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              if (!isRefunded)
+                _SmallActionButton(icon: Icons.refresh, color: Colors.orange, onTap: onRefund),
+              const SizedBox(width: 8),
+              _SmallActionButton(icon: Icons.edit, color: Colors.blue, onTap: onEdit),
+              const SizedBox(width: 8),
+              _SmallActionButton(icon: Icons.delete_outline, color: Colors.red, onTap: onDelete),
+            ],
+          ),
+          const Divider(height: 16, color: Color(0xFFF8FAFC)),
+        ],
+      ),
+    );
+  }
+}
+
+class _SmallActionButton extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _SmallActionButton({required this.icon, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
         ),
+        child: Icon(icon, color: color, size: 16),
       ),
     );
   }

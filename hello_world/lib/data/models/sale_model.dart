@@ -31,6 +31,9 @@ class SaleRecord extends HiveObject {
   @HiveField(8)
   late String status; // 'Sold', 'Refunded'
 
+  @HiveField(9)
+  String? billId;
+
   SaleRecord({
     required this.id,
     required this.itemId,
@@ -41,5 +44,6 @@ class SaleRecord extends HiveObject {
     required this.profit,
     required this.date,
     this.status = 'Sold',
+    this.billId,
   });
 }
