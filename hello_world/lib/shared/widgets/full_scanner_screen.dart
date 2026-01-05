@@ -14,6 +14,7 @@ class FullScannerScreen extends StatefulWidget {
 
 class _FullScannerScreenState extends State<FullScannerScreen> {
   bool _isTorchOn = false;
+  bool _isPopped = false;
   final MobileScannerController _controller = MobileScannerController();
 
   @override
@@ -31,10 +32,13 @@ class _FullScannerScreenState extends State<FullScannerScreen> {
           MobileScanner(
             controller: _controller,
             onDetect: (capture) {
+              if (_isPopped) return;
               final List<Barcode> barcodes = capture.barcodes;
-              if (barcodes.isNotEmpty) {
+              if (barcodes.isNotEmpty && barcodes.first.rawValue != null) {
+                _isPopped = true;
                 HapticFeedback.vibrate();
                 SystemSound.play(SystemSoundType.click);
+                _controller.stop();
                 Navigator.pop(context, barcodes.first.rawValue);
               }
             },

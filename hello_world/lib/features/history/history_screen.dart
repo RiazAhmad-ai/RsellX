@@ -1,11 +1,13 @@
-// lib/features/history/history_screen.dart
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import '../../data/repositories/data_store.dart';
 import '../../data/models/sale_model.dart';
+import '../../data/models/inventory_model.dart';
 import '../../shared/utils/formatting.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/services/reporting_service.dart';
+import '../../shared/widgets/full_scanner_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -34,6 +36,33 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   void _onDataChange() {
     if (mounted) setState(() {});
+  }
+
+  void _openSearchScanner() async {
+    final String? barcode = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const FullScannerScreen(title: "Scan to Search"),
+      ),
+    );
+
+    if (barcode == null) return;
+
+    // Search for match in inventory to get the name
+    final inventoryBox = Hive.box<InventoryItem>('inventoryBox');
+    try {
+      final match = inventoryBox.values.firstWhere((item) => item.barcode == barcode);
+      setState(() {
+        _searchController.text = match.name;
+        _searchQuery = match.name;
+      });
+    } catch (e) {
+      // If not found in inventory, just search the barcode text itself
+      setState(() {
+        _searchController.text = barcode;
+        _searchQuery = barcode;
+      });
+    }
   }
 
   String _formatDateManual(DateTime date) {
@@ -339,6 +368,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 decoration: InputDecoration(
                   hintText: "Search items or status...",
                   prefixIcon: const Icon(Icons.search),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.qr_code_scanner, color: AppColors.primary),
+                    onPressed: _openSearchScanner,
+                  ),
                   filled: true,
                   fillColor: Colors.white,
                   border: OutlineInputBorder(
