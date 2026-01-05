@@ -8,6 +8,7 @@ import 'add_item_sheet.dart';
 import 'sell_item_sheet.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -18,7 +19,88 @@ class InventoryScreen extends StatefulWidget {
 
 class _InventoryScreenState extends State<InventoryScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   String _searchQuery = "";
+  
+  int _currentPage = 1;
+  static const int _pageSize = 20;
+  bool _isLoadingMore = false;
+  List<InventoryItem> _displayedItems = [];
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialData();
+    _scrollController.addListener(_onScroll);
+    // Listen to Hive box changes to refresh UI automatically
+    Hive.box<InventoryItem>('inventoryBox').listenable().addListener(_onHiveBoxChanged);
+  }
+
+  void _onHiveBoxChanged() {
+    if (mounted) {
+      _loadInitialData();
+    }
+  }
+
+  @override
+  void dispose() {
+    Hive.box<InventoryItem>('inventoryBox').listenable().removeListener(_onHiveBoxChanged);
+    _scrollController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      _loadMoreData();
+    }
+  }
+
+  void _loadInitialData() {
+    final box = Hive.box<InventoryItem>('inventoryBox');
+    final allItems = box.values.where((item) {
+      final query = _searchQuery.toLowerCase();
+      return item.name.toLowerCase().contains(query) || 
+             item.barcode.toLowerCase().contains(query);
+    }).toList();
+    
+    // Sort by name by default
+    allItems.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+    setState(() {
+      _currentPage = 1;
+      _displayedItems = allItems.take(_pageSize).toList();
+    });
+  }
+
+  void _loadMoreData() {
+    if (_isLoadingMore) return;
+    
+    final box = Hive.box<InventoryItem>('inventoryBox');
+    final allItems = box.values.where((item) {
+      final query = _searchQuery.toLowerCase();
+      return item.name.toLowerCase().contains(query) || 
+             item.barcode.toLowerCase().contains(query);
+    }).toList();
+    
+    allItems.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+    if (_displayedItems.length >= allItems.length) return;
+
+    setState(() => _isLoadingMore = true);
+
+    // Simulate a small delay for smoother feel or actual DB fetch latency
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      
+      final nextItems = allItems.skip(_currentPage * _pageSize).take(_pageSize).toList();
+      setState(() {
+        _displayedItems.addAll(nextItems);
+        _currentPage++;
+        _isLoadingMore = false;
+      });
+    });
+  }
 
   // === 1. ADD ITEM (Open Sheet) ===
   void _addNewItemWithBarcode() {
@@ -178,7 +260,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         title: Text("Stock Inventory", style: AppTextStyles.h2),
         actions: [
@@ -235,59 +317,84 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
           // ITEM LIST
           Expanded(
-            child: ValueListenableBuilder<Box<InventoryItem>>(
-              valueListenable: Hive.box<InventoryItem>('inventoryBox').listenable(),
-              builder: (context, box, _) {
-                final items = box.values.where((item) {
-                  final query = _searchQuery.toLowerCase();
-                  return item.name.toLowerCase().contains(query) || 
-                         item.barcode.toLowerCase().contains(query);
-                }).toList();
+            child: _buildItemList(),
+          ),
 
-                if (items.isEmpty) {
-                  return const Center(child: Text("No items found. Scan or Add new."));
-                }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    return Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.grey[200]!)),
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        onTap: () => _showEditSheet(item),
-                        leading: Container(
-                          width: 50, height: 50,
-                          decoration: BoxDecoration(color: AppColors.accent.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                          child: const Icon(Icons.inventory_2_outlined, color: AppColors.accent),
-                        ),
-                        title: Text(item.name, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold)),
-                        subtitle: Text("Rs ${item.price.toStringAsFixed(0)} | Code: ${item.barcode}", style: AppTextStyles.bodySmall),
-                        trailing: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: item.stock < 5 ? AppColors.error.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            "${item.stock} Left",
-                            style: AppTextStyles.label.copyWith(
-                              color: item.stock < 5 ? AppColors.error : AppColors.success,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemList() {
+    if (_displayedItems.isEmpty && _searchQuery.isEmpty) {
+      return const Center(child: Text("No items found. Scan or Add new."));
+    }
+    
+    if (_displayedItems.isEmpty && _searchQuery.isNotEmpty) {
+      return const Center(child: Text("No items match your search."));
+    }
+
+    return AnimationLimiter(
+      child: ListView.builder(
+        controller: _scrollController,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _displayedItems.length + (_isLoadingMore ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == _displayedItems.length) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            );
+          }
+          
+          final item = _displayedItems[index];
+          return AnimationConfiguration.staggeredList(
+            position: index,
+            duration: const Duration(milliseconds: 375),
+            child: SlideAnimation(
+              verticalOffset: 50.0,
+              child: FadeInAnimation(
+                child: Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(color: Colors.grey[200]!),
+                  ),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    onTap: () => _showEditSheet(item),
+                    leading: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.inventory_2_outlined, color: AppColors.accent),
+                    ),
+                    title: Text(item.name, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold)),
+                    subtitle: Text("Rs ${item.price.toStringAsFixed(0)} | Code: ${item.barcode}", style: AppTextStyles.bodySmall),
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: item.stock < 5 ? AppColors.error.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        "${item.stock} Left",
+                        style: AppTextStyles.label.copyWith(
+                          color: item.stock < 5 ? AppColors.error : AppColors.success,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    );
-                  },
-                );
-              },
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:provider/provider.dart';
 import 'features/splash/splash_screen.dart';
+import 'core/theme/app_theme.dart';
 import 'data/models/inventory_model.dart';
 import 'data/models/sale_model.dart';
 import 'data/models/expense_model.dart';
@@ -23,10 +25,10 @@ Future<void> main() async {
       Hive.registerAdapter(ExpenseItemAdapter());
     }
 
-    // 2. Data Migration (Handle old Map data)
+    // 2. Data Migration
     await _migrateData();
 
-    // 3. Open Boxes (Now safe to open with types)
+    // 3. Open Boxes
     await Hive.openBox<InventoryItem>('inventoryBox');
     await Hive.openBox<ExpenseItem>('expensesBox');
     await Hive.openBox<SaleRecord>('historyBox');
@@ -39,7 +41,7 @@ Future<void> main() async {
 }
 
 Future<void> _migrateData() async {
-  // 1. Migrate History
+  // Logic for data migration remains the same to handle legacy Map data
   var historyBox = await Hive.openBox('historyBox');
   for (var key in historyBox.keys) {
     var value = historyBox.get(key);
@@ -65,7 +67,6 @@ Future<void> _migrateData() async {
   }
   await historyBox.close();
 
-  // 2. Migrate Inventory
   var inventoryBox = await Hive.openBox('inventoryBox');
   for (var key in inventoryBox.keys) {
     var value = inventoryBox.get(key);
@@ -87,7 +88,6 @@ Future<void> _migrateData() async {
   }
   await inventoryBox.close();
 
-  // 3. Migrate Expenses
   var expensesBox = await Hive.openBox('expensesBox');
   for (var key in expensesBox.keys) {
     var value = expensesBox.get(key);
@@ -117,11 +117,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Retail POS System',
-      theme: ThemeData(
-        primarySwatch: Colors.red,
-        scaffoldBackgroundColor: Colors.white,
-        useMaterial3: true,
-      ),
+      theme: AppTheme.lightTheme,
+      themeMode: ThemeMode.light,
       home: const SplashScreen(),
     );
   }

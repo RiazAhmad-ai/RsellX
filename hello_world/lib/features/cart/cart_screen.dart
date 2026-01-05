@@ -3,9 +3,18 @@ import '../../data/repositories/data_store.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../shared/utils/formatting.dart';
+import '../../core/services/reporting_service.dart';
+import '../../data/models/sale_model.dart';
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
+
+  @override
+  State<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
+  bool _shouldPrintInvoice = false;
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +125,35 @@ class CartScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
+                    
+                    // TOGGLE FOR INVOICE
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.receipt_long, color: AppColors.primary, size: 20),
+                              const SizedBox(width: 10),
+                              Text("Generate Invoice", style: AppTextStyles.bodyMedium),
+                            ],
+                          ),
+                          Switch(
+                            value: _shouldPrintInvoice,
+                            activeColor: AppColors.secondary,
+                            onChanged: (val) => setState(() => _shouldPrintInvoice = val),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
                       height: 56,
@@ -127,7 +164,12 @@ class CartScreen extends StatelessWidget {
                           elevation: 0,
                         ),
                         onPressed: () async {
-                          await DataStore().checkoutCart();
+                          final store = DataStore();
+                          final cartItems = List<SaleRecord>.from(store.cart);
+                          final billId = "BILL-${DateTime.now().millisecondsSinceEpoch}";
+                          
+                          await store.checkoutCart();
+                          
                           if (context.mounted) {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -137,6 +179,16 @@ class CartScreen extends StatelessWidget {
                                 behavior: SnackBarBehavior.floating,
                               ),
                             );
+
+                            // Only generate if toggle is ON
+                            if (_shouldPrintInvoice) {
+                              ReportingService.generateInvoice(
+                                shopName: store.shopName,
+                                address: store.address,
+                                items: cartItems,
+                                billId: billId,
+                              );
+                            }
                           }
                         },
                         child: const Text(

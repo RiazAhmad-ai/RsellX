@@ -1,15 +1,17 @@
-// lib/features/dashboard/dashboard_screen.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../shared/widgets/filter_buttons.dart';
 import 'overview_card.dart';
 import '../../shared/widgets/alert_card.dart';
 import 'analysis_chart.dart';
+import 'top_products_chart.dart';
 import '../settings/settings_screen.dart';
 import '../../data/repositories/data_store.dart';
 import '../../shared/utils/formatting.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 
+import 'package:provider/provider.dart';
 import '../cart/cart_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -51,31 +53,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         titleSpacing: 24,
         title: Row(
           children: [
             ClipOval(
-              child: Image.asset(
-                'assets/logo.png',
-                height: 40,
-                width: 40,
-                fit: BoxFit.cover,
-                errorBuilder: (c, o, s) => Container(
-                  height: 40,
-                  width: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.storefront,
-                    color: AppColors.primary,
-                    size: 24,
-                  ),
-                ),
-              ),
+              child: DataStore().logoPath != null && File(DataStore().logoPath!).existsSync()
+                  ? Image.file(
+                      File(DataStore().logoPath!),
+                      height: 40,
+                      width: 40,
+                      fit: BoxFit.cover,
+                      key: ValueKey(DataStore().logoPath), // Instant update key
+                    )
+                  : Image.asset(
+                      'assets/logo.png',
+                      height: 40,
+                      width: 40,
+                      fit: BoxFit.cover,
+                      errorBuilder: (c, o, s) => Container(
+                        height: 40,
+                        width: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.storefront,
+                          color: AppColors.primary,
+                          size: 24,
+                        ),
+                      ),
+                    ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -185,6 +195,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 AnalysisChart(
                   title: "$_filter Overview",
                   chartData: analyticsData, // <--- Passing Real Data Here
+                ),
+
+                const SizedBox(height: 20),
+
+                // === TOP MOVING PRODUCTS ===
+                TopProductsChart(
+                  data: DataStore().getTopSellingProducts(),
                 ),
 
                 const SizedBox(height: 40),

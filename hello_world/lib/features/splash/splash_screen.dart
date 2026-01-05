@@ -1,5 +1,6 @@
 // lib/features/splash/splash_screen.dart
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'dart:async';
 import '../main/main_screen.dart';
 import '../../data/repositories/data_store.dart';
@@ -42,14 +43,21 @@ class _SplashScreenState extends State<SplashScreen> {
                 color: AppColors.primary.withOpacity(0.1), // Background circle
                 shape: BoxShape.circle,
               ),
-              child: Image.asset(
-                'assets/logo.png', // Apni file check karein
-                width: 100,
-                height: 100,
-                fit: BoxFit.contain,
-                errorBuilder: (c, o, s) =>
-                    const Icon(Icons.storefront, size: 80, color: AppColors.primary),
-              ),
+              child: DataStore().logoPath != null && File(DataStore().logoPath!).existsSync()
+                  ? Image.file(
+                      File(DataStore().logoPath!),
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.contain,
+                    )
+                  : Image.asset(
+                      'assets/logo.png',
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.contain,
+                      errorBuilder: (c, o, s) =>
+                          const Icon(Icons.storefront, size: 80, color: AppColors.primary),
+                    ),
             ),
 
             const SizedBox(height: 30),

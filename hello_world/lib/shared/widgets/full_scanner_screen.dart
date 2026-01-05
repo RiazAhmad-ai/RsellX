@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class FullScannerScreen extends StatefulWidget {
   final String title;
@@ -16,10 +17,19 @@ class _FullScannerScreenState extends State<FullScannerScreen> {
   bool _isTorchOn = false;
   bool _isPopped = false;
   final MobileScannerController _controller = MobileScannerController();
+  final AudioPlayer _player = AudioPlayer();
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-load for faster playback
+    _player.setSource(AssetSource('scanner_beep.mp3'));
+  }
 
   @override
   void dispose() {
     _controller.dispose();
+    _player.dispose();
     super.dispose();
   }
 
@@ -36,8 +46,10 @@ class _FullScannerScreenState extends State<FullScannerScreen> {
               final List<Barcode> barcodes = capture.barcodes;
               if (barcodes.isNotEmpty && barcodes.first.rawValue != null) {
                 _isPopped = true;
-                HapticFeedback.vibrate();
-                SystemSound.play(SystemSoundType.click);
+                
+                // 1. Play Custom High-Pitch Beep
+                _player.resume(); // resume/play from start
+                
                 _controller.stop();
                 Navigator.pop(context, barcodes.first.rawValue);
               }

@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/services/reporting_service.dart';
 import '../../shared/widgets/full_scanner_screen.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -20,22 +21,112 @@ class _HistoryScreenState extends State<HistoryScreen> {
   DateTime _selectedDate = DateTime.now();
   String _searchQuery = "";
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  
+  int _currentPage = 1;
+  static const int _pageSize = 15;
+  bool _isLoadingMore = false;
+  List<String> _displayedBillOrder = [];
+  Map<String, List<SaleRecord>> _groupedSales = {};
+  List<SaleRecord> _filteredHistory = [];
 
   @override
   void initState() {
     super.initState();
     DataStore().addListener(_onDataChange);
+    _scrollController.addListener(_onScroll);
+    _loadInitialHistory();
   }
 
   @override
   void dispose() {
     DataStore().removeListener(_onDataChange);
+    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      _loadMoreHistory();
+    }
+  }
+
+  void _loadInitialHistory() {
+    final allHistory = DataStore().historyItems;
+    
+    _filteredHistory = allHistory.where((item) {
+      final matchesDate = _isSameDay(item.date, _selectedDate);
+      final name = item.name.toLowerCase();
+      final status = item.status.toLowerCase();
+      return matchesDate && (name.contains(_searchQuery.toLowerCase()) || status.contains(_searchQuery.toLowerCase()));
+    }).toList();
+
+    // Grouping
+    _groupedSales = {};
+    final List<String> fullBillOrder = [];
+    for (var item in _filteredHistory) {
+      final key = item.billId ?? item.id;
+      if (!_groupedSales.containsKey(key)) {
+        _groupedSales[key] = [];
+        fullBillOrder.add(key);
+      }
+      _groupedSales[key]!.add(item);
+    }
+    
+    // Sort bills by time (newest first)
+    fullBillOrder.sort((a, b) {
+       final timeA = _groupedSales[a]!.first.date;
+       final timeB = _groupedSales[b]!.first.date;
+       return timeB.compareTo(timeA);
+    });
+
+    setState(() {
+      _currentPage = 1;
+      _displayedBillOrder = fullBillOrder.take(_pageSize).toList();
+    });
+  }
+
+  void _loadMoreHistory() {
+    if (_isLoadingMore) return;
+    
+    // Total bills
+    final Map<String, List<SaleRecord>> allGroups = {};
+    final List<String> fullBillOrder = [];
+    for (var item in _filteredHistory) {
+      final key = item.billId ?? item.id;
+      if (!allGroups.containsKey(key)) {
+        allGroups[key] = [];
+        fullBillOrder.add(key);
+      }
+      allGroups[key]!.add(item);
+    }
+
+    fullBillOrder.sort((a, b) {
+       final timeA = allGroups[a]!.first.date;
+       final timeB = allGroups[b]!.first.date;
+       return timeB.compareTo(timeA);
+    });
+
+    if (_displayedBillOrder.length >= fullBillOrder.length) return;
+
+    setState(() => _isLoadingMore = true);
+
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      final nextBills = fullBillOrder.skip(_currentPage * _pageSize).take(_pageSize).toList();
+      setState(() {
+        _displayedBillOrder.addAll(nextBills);
+        _currentPage++;
+        _isLoadingMore = false;
+      });
+    });
+  }
+
   void _onDataChange() {
-    if (mounted) setState(() {});
+    if (mounted) {
+      _loadInitialHistory();
+    }
   }
 
   void _openSearchScanner() async {
@@ -47,21 +138,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
 
     if (barcode == null) return;
-
-    // Search for match in inventory to get the name
+    
     final inventoryBox = Hive.box<InventoryItem>('inventoryBox');
     try {
       final match = inventoryBox.values.firstWhere((item) => item.barcode == barcode);
-      setState(() {
-        _searchController.text = match.name;
-        _searchQuery = match.name;
-      });
+      _searchController.text = match.name;
+      _searchQuery = match.name;
+      _loadInitialHistory();
     } catch (e) {
-      // If not found in inventory, just search the barcode text itself
-      setState(() {
-        _searchController.text = barcode;
-        _searchQuery = barcode;
-      });
+      _searchController.text = barcode;
+      _searchQuery = barcode;
+      _loadInitialHistory();
     }
   }
 
@@ -223,47 +310,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final allHistory = DataStore().historyItems;
-    
-    // Filter logic
-    // Filter logic
-    final filteredHistory = allHistory.where((item) {
-      final matchesDate = _isSameDay(item.date, _selectedDate);
-      
-      final name = item.name.toLowerCase();
-      final status = item.status.toLowerCase();
-      final matchesSearch = name.contains(_searchQuery.toLowerCase()) || 
-                            status.contains(_searchQuery.toLowerCase());
-      
-      return matchesDate && matchesSearch;
-    }).toList();
-
-    // Summary calculations
+    // Summary calculations from the already filtered set in _loadInitialHistory
     double dayTotal = 0;
     double dayProfit = 0;
-    for (var item in filteredHistory) {
+    for (var item in _filteredHistory) {
       if (item.status != "Refunded") {
         dayTotal += (item.price * item.qty);
         dayProfit += item.profit;
       }
     }
 
-    // Grouping by Bill ID
-    final Map<String, List<SaleRecord>> groupedSales = {};
-    final List<String> billOrder = [];
-
-    for (var item in filteredHistory) {
-      final key = item.billId ?? item.id;
-      if (!groupedSales.containsKey(key)) {
-        groupedSales[key] = [];
-        billOrder.add(key);
-      }
-      groupedSales[key]!.add(item);
-    }
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
+        controller: _scrollController,
         slivers: [
           // 1. Sleek App Bar
           SliverAppBar(
@@ -306,7 +366,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           IconButton(
                             onPressed: () => ReportingService.generateSalesReport(
                               shopName: DataStore().shopName,
-                              sales: filteredHistory,
+                              sales: _filteredHistory,
                               date: _selectedDate,
                             ),
                             icon: Container(
@@ -336,7 +396,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   );
                                 },
                               );
-                              if (picked != null) setState(() => _selectedDate = picked);
+                              if (picked != null) {
+                                _selectedDate = picked;
+                                _loadInitialHistory();
+                              }
                             },
                             icon: Container(
                               padding: const EdgeInsets.all(8),
@@ -364,7 +427,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
               padding: const EdgeInsets.all(16.0),
               child: TextField(
                 controller: _searchController,
-                onChanged: (v) => setState(() => _searchQuery = v),
+                onChanged: (v) {
+                  _searchQuery = v;
+                  _loadInitialHistory();
+                },
                 decoration: InputDecoration(
                   hintText: "Search items or status...",
                   prefixIcon: const Icon(Icons.search),
@@ -385,7 +451,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ),
 
           // 3. History List (Grouped)
-          billOrder.isEmpty
+          _displayedBillOrder.isEmpty
               ? SliverFillRemaining(
                   child: Center(
                     child: Column(
@@ -400,20 +466,38 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 )
               : SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final billId = billOrder[index];
-                        final items = groupedSales[billId]!;
-                        return _BillCard(
-                          billId: billId,
-                          items: items,
-                          onRefund: (item) => _handleRefund(item),
-                          onDelete: (id) => _handleDelete(id),
-                          onEdit: (item) => _handleEdit(item),
-                        );
-                      },
-                      childCount: billOrder.length,
+                  sliver: AnimationLimiter(
+                    child: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          if (index == _displayedBillOrder.length) {
+                             return const Padding(
+                               padding: EdgeInsets.symmetric(vertical: 20),
+                               child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                             );
+                          }
+
+                          final billId = _displayedBillOrder[index];
+                          final items = _groupedSales[billId]!;
+                          return AnimationConfiguration.staggeredList(
+                            position: index,
+                            duration: const Duration(milliseconds: 375),
+                            child: SlideAnimation(
+                              verticalOffset: 50.0,
+                              child: FadeInAnimation(
+                                child: _BillCard(
+                                  billId: billId,
+                                  items: items,
+                                  onRefund: (item) => _handleRefund(item),
+                                  onDelete: (id) => _handleDelete(id),
+                                  onEdit: (item) => _handleEdit(item),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                        childCount: _displayedBillOrder.length + (_isLoadingMore ? 1 : 0),
+                      ),
                     ),
                   ),
                 ),

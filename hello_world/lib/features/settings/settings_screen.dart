@@ -7,6 +7,10 @@ import '../../data/repositories/data_store.dart';
 import '../splash/splash_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../core/services/backup_service.dart';
+import '../../core/services/reporting_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -186,99 +190,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
 
-  // 2. BACKUP (SAVE TO ACCESSIBLE FILE)
+  // 2. BACKUP using BackupService
   void _startBackup() async {
     if (!await _verifyPasscode()) return;
-
     try {
-      final backupData = DataStore().generateBackupPayload();
-      final jsonString = jsonEncode(backupData);
-      
-      // Try External Storage first for visibility, fallback to Internal
-      Directory? directory = await getExternalStorageDirectory();
-      directory ??= await getApplicationDocumentsDirectory();
-      
-      final file = File('${directory.path}/crockery_backup.json');
-      await file.writeAsString(jsonString);
-
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("Backup Successful! 💾"),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text("Data saved as a hidden system file for security."),
-                const SizedBox(height: 10),
-                const Text("PATH:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10)),
-                SelectableText(
-                  file.path,
-                  style: const TextStyle(fontSize: 10, color: Colors.blue),
-                ),
-                const SizedBox(height: 15),
-                const Text(
-                  "To Restore on New Phone:\n1. Copy this file to the SAME path on new phone.\n2. Click 'Import Data'.",
-                  style: TextStyle(fontSize: 12),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text("CLOSE")),
-            ],
-          ),
-        );
-      }
+      await BackupService.exportBackup();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Backup generated and shared! 💾"), backgroundColor: AppColors.success),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Backup Failed: $e")));
     }
   }
 
-  // 3. IMPORT BACKUP (FROM ACCESSIBLE FILE)
+  // 3. IMPORT using BackupService
   void _importBackup() async {
     if (!await _verifyPasscode()) return;
-
     try {
-      Directory? directory = await getExternalStorageDirectory();
-      directory ??= await getApplicationDocumentsDirectory();
-      
-      final file = File('${directory.path}/crockery_backup.json');
+       final success = await BackupService.importBackup();
+       if (success && mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+           const SnackBar(content: Text("Data Restored Successfully! ✅"), backgroundColor: AppColors.success),
+         );
+       }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Restore Failed: $e")));
+    }
+  }
 
-      if (!await file.exists()) {
+  // 3b. EXCEL IMPORT
+  void _importFromExcel() async {
+    if (!await _verifyPasscode()) return;
+    try {
+      final success = await ReportingService.importInventoryFromExcel();
+      if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("No backup file found in Documents!")),
-        );
-        return;
-      }
-
-      final jsonString = await file.readAsString();
-      final Map<String, dynamic> data = jsonDecode(jsonString);
-
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("Restore Data?"),
-            content: const Text("This will replace all current data. Are you sure?"),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-              ElevatedButton(
-                onPressed: () async {
-                  Navigator.pop(context);
-                  await DataStore().restoreFromBackup(data);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Data Restored Successfully! ✅"), backgroundColor: Colors.green),
-                  );
-                },
-                child: const Text("RESTORE"),
-              ),
-            ],
-          ),
+          const SnackBar(content: Text("Inventory Imported from Excel! ✅"), backgroundColor: AppColors.success),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Restore Failed: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Excel Import Failed: $e")));
     }
   }
 
@@ -330,6 +281,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickLogo() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      if (image == null) return;
+
+      // Permanent Directoy main save karna
+      final directory = await getApplicationDocumentsDirectory();
+      final String fileName = 'shop_logo_${DateTime.now().millisecondsSinceEpoch}.png';
+      final File logoFile = File('${directory.path}/$fileName');
+      
+      // Copy the image
+      await File(image.path).copy(logoFile.path);
+
+      await DataStore().updateProfile(
+        DataStore().ownerName,
+        DataStore().shopName,
+        DataStore().phone,
+        DataStore().address,
+        logo: logoFile.path,
+      );
+
+      if (mounted) {
+        setState(() {}); // Force local UI update
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Shop logo updated successfully! ✅")),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Format error or selection cancelled: $e")),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = DataStore();
@@ -337,7 +326,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary, size: 20),
@@ -377,17 +366,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       color: Colors.red[50],
                       shape: BoxShape.circle,
                     ),
-                    child: ClipOval(
-                      child: Image.asset(
-                        'assets/logo.png',
-                        fit: BoxFit.cover,
-                        errorBuilder: (c, o, s) => const Icon(
-                          Icons.business_center,
-                          color: Colors.red,
-                          size: 35,
+                  child: ClipOval(
+                    child: store.logoPath != null && File(store.logoPath!).existsSync()
+                      ? Image.file(
+                          File(store.logoPath!),
+                          fit: BoxFit.cover,
+                          key: ValueKey(store.logoPath),
+                        )
+                      : Image.asset(
+                          'assets/logo.png',
+                          fit: BoxFit.cover,
+                          errorBuilder: (c, o, s) => const Icon(
+                            Icons.business_center,
+                            color: Colors.red,
+                            size: 35,
+                          ),
                         ),
-                      ),
-                    ),
+                  ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -436,7 +431,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             const SizedBox(height: 30),
 
-            // === 2. DATA MANAGEMENT ===
+            // === 2. UI & APPEARANCE ===
+            _buildSectionHeader("Appearance & Graphics"),
+            _buildSettingsTile(
+              Icons.image_outlined,
+              "Change Shop Logo",
+              DataStore().logoPath != null ? "Custom logo is set" : "Using default logo",
+              onTap: _pickLogo,
+              trailing: DataStore().logoPath != null 
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: Image.file(
+                      File(DataStore().logoPath!), 
+                      width: 30, 
+                      height: 30, 
+                      fit: BoxFit.cover,
+                      key: ValueKey(DataStore().logoPath), // Cache bust key
+                    ),
+                  )
+                : const Icon(Icons.add_photo_alternate_outlined, color: AppColors.primary),
+            ),
+
+            const SizedBox(height: 10),
+
+            // === 3. DATA MANAGEMENT ===
             _buildSectionHeader("Data Management"),
 
             _buildSettingsTile(
@@ -451,6 +469,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               "Import Data",
               "Restore from backup file",
               onTap: _importBackup,
+            ),
+
+            _buildSettingsTile(
+              Icons.table_rows_rounded,
+              "Import Inventory (Excel)",
+              "Bulk add items from .xlsx",
+              onTap: _importFromExcel,
             ),
 
 
@@ -531,19 +556,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     String subtitle, {
     required VoidCallback onTap,
     bool isRed = false,
+    Widget? trailing,
   }) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade100),
+        border: Border.all(color: Theme.of(context).brightness == Brightness.light ? Colors.grey.shade100 : Colors.transparent),
       ),
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: isRed ? AppColors.error.withOpacity(0.1) : AppColors.background,
+            color: isRed ? AppColors.error.withOpacity(0.1) : (Theme.of(context).brightness == Brightness.light ? AppColors.background : Colors.white10),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: isRed ? AppColors.error : AppColors.textSecondary, size: 22),
@@ -551,7 +577,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: Text(
           title,
           style: AppTextStyles.bodyLarge.copyWith(
-            color: isRed ? AppColors.error : AppColors.textPrimary,
+            color: isRed ? AppColors.error : Theme.of(context).textTheme.bodyLarge?.color,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -559,7 +585,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           subtitle,
           style: AppTextStyles.label,
         ),
-        trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+        trailing: trailing ?? const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
         onTap: onTap,
       ),
     );

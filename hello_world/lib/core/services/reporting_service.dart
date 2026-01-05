@@ -3,8 +3,10 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:excel/excel.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../data/models/sale_model.dart';
 import '../../data/models/expense_model.dart';
 import '../../data/models/inventory_model.dart';
@@ -154,5 +156,107 @@ class ReportingService {
       await file.writeAsBytes(bytes);
       await Share.shareXFiles([XFile(file.path)], text: 'Inventory Stock Report - $shopName');
     }
+  }
+
+  static Future<void> generateInvoice({
+    required String shopName,
+    required String address,
+    required List<SaleRecord> items,
+    required String billId,
+  }) async {
+    final pdf = pw.Document();
+    final total = items.fold(0.0, (sum, item) => sum + (item.price * item.qty));
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.roll80, // Thermal printer style
+        build: (context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Center(
+                child: pw.Text(shopName.toUpperCase(), style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+              ),
+              pw.Center(
+                child: pw.Text(address, style: const pw.TextStyle(fontSize: 10)),
+              ),
+              pw.SizedBox(height: 10),
+              pw.Divider(),
+              pw.Text("Bill ID: $billId", style: const pw.TextStyle(fontSize: 10)),
+              pw.Text("Date: ${DateTime.now().toString().split('.')[0]}", style: const pw.TextStyle(fontSize: 10)),
+              pw.Divider(),
+              pw.SizedBox(height: 5),
+              pw.TableHelper.fromTextArray(
+                context: context,
+                headers: ['Item', 'Qty', 'Amt'],
+                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
+                cellStyle: const pw.TextStyle(fontSize: 9),
+                cellAlignment: pw.Alignment.centerLeft,
+                border: null,
+                data: items.map((i) => [
+                  i.name,
+                  i.qty.toString(),
+                  Formatter.formatCurrency(i.price * i.qty),
+                ]).toList(),
+              ),
+              pw.Divider(),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.end,
+                children: [
+                   pw.Text("TOTAL: Rs ${Formatter.formatCurrency(total)}", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
+                ],
+              ),
+              pw.SizedBox(height: 20),
+              pw.Center(child: pw.Text("Thank You for Shopping!", style: const pw.TextStyle(fontSize: 10, fontStyle: pw.FontStyle.italic))),
+            ],
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
+  }
+
+  static Future<bool> importInventoryFromExcel() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx'],
+      );
+
+      if (result != null) {
+        var bytes = File(result.files.single.path!).readAsBytesSync();
+        var excel = Excel.decodeBytes(bytes);
+        final box = Hive.box<InventoryItem>('inventoryBox');
+
+        for (var table in excel.tables.keys) {
+          var rows = excel.tables[table]!.rows;
+          // Assume first row is header: Name, Barcode, Price, Stock
+          for (int i = 1; i < rows.length; i++) {
+            var row = rows[i];
+            if (row.length < 3) continue;
+
+            final name = row[0]?.value?.toString() ?? "";
+            final barcode = row[1]?.value?.toString() ?? "N/A";
+            final price = double.tryParse(row[2]?.value?.toString() ?? "0") ?? 0.0;
+            final stock = int.tryParse(row[3]?.value?.toString() ?? "0") ?? 0;
+
+            if (name.isNotEmpty) {
+              box.add(InventoryItem(
+                id: DateTime.now().millisecondsSinceEpoch.toString() + i.toString(),
+                name: name,
+                barcode: barcode,
+                price: price,
+                stock: stock,
+              ));
+            }
+          }
+        }
+        return true;
+      }
+    } catch (e) {
+      print("Excel Import Error: $e");
+    }
+    return false;
   }
 }

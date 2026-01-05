@@ -398,12 +398,14 @@ class DataStore extends ChangeNotifier {
   String get ownerName => _settingsBox.get('ownerName', defaultValue: "Riaz Ahmad");
   String get phone => _settingsBox.get('phone', defaultValue: "+92 3195910091");
   String get address => _settingsBox.get('address', defaultValue: "Jehangira Underpass Shop#21");
+  String? get logoPath => _settingsBox.get('logoPath');
 
-  Future<void> updateProfile(String name, String shop, String phone, String address) async {
+  Future<void> updateProfile(String name, String shop, String phone, String address, {String? logo}) async {
     _settingsBox.put('ownerName', name);
     _settingsBox.put('shopName', shop);
     _settingsBox.put('phone', phone);
     _settingsBox.put('address', address);
+    if (logo != null) _settingsBox.put('logoPath', logo);
     notifyListeners();
   }
 
@@ -459,5 +461,21 @@ class DataStore extends ChangeNotifier {
     }
     _cart.clear();
     notifyListeners();
+  }
+
+  // === 8. TOP SELLING PRODUCTS ===
+  List<Map<String, dynamic>> getTopSellingProducts({int limit = 5}) {
+    final Map<String, int> productSales = {};
+    for (var sale in _validHistory) {
+      productSales[sale.name] = (productSales[sale.name] ?? 0) + sale.qty;
+    }
+
+    var sortedEntries = productSales.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return sortedEntries.take(limit).map((e) => {
+      'name': e.key,
+      'qty': e.value,
+    }).toList();
   }
 }
