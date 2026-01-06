@@ -7,6 +7,7 @@ import '../../core/theme/app_text_styles.dart';
 import '../../shared/utils/formatting.dart';
 import '../../core/services/reporting_service.dart';
 import '../../data/models/sale_model.dart';
+import 'package:flutter/services.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -17,6 +18,24 @@ class CartScreen extends StatefulWidget {
 
 class _CartScreenState extends State<CartScreen> {
   bool _shouldPrintInvoice = false;
+  final _discountCtrl = TextEditingController();
+  double _discount = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _discountCtrl.addListener(() {
+      setState(() {
+        _discount = double.tryParse(_discountCtrl.text) ?? 0.0;
+      });
+    });
+  }
+  
+  @override
+  void dispose() {
+    _discountCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +68,9 @@ class _CartScreenState extends State<CartScreen> {
               ),
             );
           }
+          
+          final subTotal = salesProvider.cartTotal;
+          final finalTotal = subTotal - _discount;
 
           return Column(
             children: [
@@ -74,9 +96,33 @@ class _CartScreenState extends State<CartScreen> {
                       child: ListTile(
                         contentPadding: const EdgeInsets.all(16),
                         title: Text(item.name, style: AppTextStyles.h3),
-                        subtitle: Text(
-                          "Rs ${Formatter.formatCurrency(item.price)} x ${item.qty}",
-                          style: AppTextStyles.label,
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Rs ${Formatter.formatCurrency(item.price)} x ${item.qty}",
+                              style: AppTextStyles.label,
+                            ),
+                            const SizedBox(height: 4),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              children: [
+                                if (item.category != "General")
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                                    child: Text(item.category, style: const TextStyle(fontSize: 10, color: Colors.purple, fontWeight: FontWeight.bold)),
+                                  ),
+                                if (item.size != "N/A")
+                                  Container(
+                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                     decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                                     child: Text("Size: ${item.size}", style: const TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.bold)),
+                                  ),
+                              ],
+                            ),
+                          ],
                         ),
                         trailing: Row(
                            mainAxisSize: MainAxisSize.min,
@@ -111,27 +157,58 @@ class _CartScreenState extends State<CartScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Subtotal
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text("Total Items", style: AppTextStyles.label),
-                        Text("${salesProvider.cartCount}", style: AppTextStyles.h3),
+                        Text("Subtotal", style: AppTextStyles.label),
+                        Text("${salesProvider.cartCount} items | Rs ${Formatter.formatCurrency(subTotal)}", style: AppTextStyles.bodyMedium),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
+                    
+                    // Discount Input
+                    Row(
+                      children: [
+                        const Icon(Icons.local_offer_outlined, color: Colors.orange, size: 20),
+                        const SizedBox(width: 8),
+                        Text("Discount (Rs)", style: AppTextStyles.h3),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextField(
+                            controller: _discountCtrl,
+                            keyboardType: TextInputType.number,
+                            textAlign: TextAlign.end,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            decoration: InputDecoration(
+                              hintText: "0",
+                              filled: true,
+                              fillColor: Colors.grey[50],
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    const Divider(height: 30),
+                    
+                    // Final Total
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text("Total Amount", style: AppTextStyles.h3),
+                        Text("TOTAL PAYABLE", style: AppTextStyles.h3),
                         Text(
-                          "Rs ${Formatter.formatCurrency(salesProvider.cartTotal)}",
-                          style: AppTextStyles.h1.copyWith(color: AppColors.secondary, fontSize: 24),
+                          "Rs ${Formatter.formatCurrency(finalTotal)}",
+                          style: AppTextStyles.h1.copyWith(color: AppColors.secondary, fontSize: 26),
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
                     
-                    // TOGGLE FOR INVOICE
+                    // INVOICE TOGGLE
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       decoration: BoxDecoration(
@@ -158,6 +235,7 @@ class _CartScreenState extends State<CartScreen> {
                     ),
                     
                     const SizedBox(height: 16),
+                    // CHECKOUT BUTTON
                     SizedBox(
                       width: double.infinity,
                       height: 56,
@@ -165,13 +243,14 @@ class _CartScreenState extends State<CartScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.secondary,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          elevation: 0,
+                          elevation: 2,
                         ),
                         onPressed: () async {
                           final cartItems = List<SaleRecord>.from(salesProvider.cart);
                           final billId = "BILL-${DateTime.now().millisecondsSinceEpoch}";
                           
-                          await salesProvider.checkoutCart();
+                          // Pass discount to checkout logic
+                          await salesProvider.checkoutCart(discount: _discount);
                           
                           if (context.mounted) {
                             Navigator.pop(context);
@@ -183,13 +262,13 @@ class _CartScreenState extends State<CartScreen> {
                               ),
                             );
 
-                            // Only generate if toggle is ON
                             if (_shouldPrintInvoice) {
                               ReportingService.generateInvoice(
                                 shopName: settingsProvider.shopName,
                                 address: settingsProvider.address,
                                 items: cartItems,
                                 billId: billId,
+                                discount: _discount,
                               );
                             }
                           }

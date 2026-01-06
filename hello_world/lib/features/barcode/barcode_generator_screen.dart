@@ -1630,7 +1630,8 @@ class _BarcodeGeneratorScreenState extends State<BarcodeGeneratorScreen> {
                                                   ),
                                                 ),
                                                 const SizedBox(width: 8),
-                                                // Stock Badge
+                                                // ... (Price Badge is above)
+                                                // Stock Badge ...
                                                 Container(
                                                   padding:
                                                       const EdgeInsets.symmetric(
@@ -1663,7 +1664,7 @@ class _BarcodeGeneratorScreenState extends State<BarcodeGeneratorScreen> {
                                                       ),
                                                       const SizedBox(width: 4),
                                                       Text(
-                                                        "${item.stock} in stock",
+                                                        "${item.stock}",
                                                         style: TextStyle(
                                                           color: isLowStock
                                                               ? AppColors.error
@@ -1679,6 +1680,25 @@ class _BarcodeGeneratorScreenState extends State<BarcodeGeneratorScreen> {
                                                     ],
                                                   ),
                                                 ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 6),
+                                            // Category & Size
+                                            Wrap(
+                                              spacing: 8,
+                                              children: [
+                                                if (item.category != "General")
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                                                    child: Text(item.category, style: const TextStyle(fontSize: 10, color: Colors.purple, fontWeight: FontWeight.bold)),
+                                                  ),
+                                                if (item.size != "N/A")
+                                                  Container(
+                                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                     decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                                                     child: Text("Size: ${item.size}", style: const TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.bold)),
+                                                  ),
                                               ],
                                             ),
                                           ],

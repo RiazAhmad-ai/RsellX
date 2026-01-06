@@ -121,7 +121,7 @@ class SalesProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> checkoutCart() async {
+  Future<void> checkoutCart({double discount = 0.0}) async {
     final String billId = "bill_${DateTime.now().millisecondsSinceEpoch}";
     final items = _cartBox.values.toList();
     final now = DateTime.now();
@@ -149,6 +149,23 @@ class SalesProvider extends ChangeNotifier {
         invItem.stock -= item.qty;
         invItem.save();
       }
+    }
+    
+    // Record Discount if any
+    if (discount > 0) {
+      final discountRecord = SaleRecord(
+        id: "disc_${billId}_${now.millisecondsSinceEpoch}",
+        itemId: "DISCOUNT",
+        name: "Discount Applied",
+        price: -discount, // Negative Price
+        actualPrice: 0,
+        qty: 1,
+        profit: -discount, // Loss
+        date: now,
+        status: "Sold",
+        billId: billId,
+      );
+      await _historyBox.put(discountRecord.id, discountRecord);
     }
     
     // Clear cart and notify all home screen listeners

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -126,13 +127,15 @@ class ReportingService {
     // Headers
     sheetObject.appendRow([
       TextCellValue("Item Name"),
+      TextCellValue("Category"),
+      TextCellValue("Size"),
       TextCellValue("Barcode"),
       TextCellValue("Price (Rs)"),
       TextCellValue("Current Stock"),
       TextCellValue("Stock Value (Rs)"),
     ]);
 
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 7; i++) {
       sheetObject.cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0)).cellStyle = headerStyle;
     }
 
@@ -140,6 +143,8 @@ class ReportingService {
     for (var item in items) {
       sheetObject.appendRow([
         TextCellValue(item.name),
+        TextCellValue(item.category),
+        TextCellValue(item.size),
         TextCellValue(item.barcode),
         DoubleCellValue(item.price),
         IntCellValue(item.stock),
@@ -163,51 +168,105 @@ class ReportingService {
     required String address,
     required List<SaleRecord> items,
     required String billId,
+    double discount = 0.0,
   }) async {
     final pdf = pw.Document();
-    final total = items.fold(0.0, (sum, item) => sum + (item.price * item.qty));
+    
+    // Load Logo
+    pw.MemoryImage? logoImage;
+    try {
+      final byteData = await rootBundle.load('assets/splash.png');
+      logoImage = pw.MemoryImage(byteData.buffer.asUint8List());
+    } catch (_) {
+      // If logo fails, we proceed without it
+    }
+
+    final double subTotal = items.fold(0.0, (sum, item) => sum + (item.price * item.qty));
+    final double finalTotal = subTotal - discount;
 
     pdf.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat.roll80, // Thermal printer style
+        pageFormat: PdfPageFormat.roll80,
+        margin: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         build: (context) {
           return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
-              pw.Center(
-                child: pw.Text(shopName.toUpperCase(), style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-              ),
-              pw.Center(
-                child: pw.Text(address, style: const pw.TextStyle(fontSize: 10)),
-              ),
-              pw.SizedBox(height: 10),
-              pw.Divider(),
-              pw.Text("Bill ID: $billId", style: const pw.TextStyle(fontSize: 10)),
-              pw.Text("Date: ${DateTime.now().toString().split('.')[0]}", style: const pw.TextStyle(fontSize: 10)),
-              pw.Divider(),
+              // === HEADER ===
+              if (logoImage != null)
+                pw.Container(
+                  height: 50,
+                  width: 50,
+                  child: pw.Image(logoImage),
+                ),
               pw.SizedBox(height: 5),
+              pw.Text(shopName.toUpperCase(), style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold), textAlign: pw.TextAlign.center),
+              if (address.isNotEmpty)
+                pw.Text(address, style: const pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.center),
+              
+              pw.SizedBox(height: 8),
+              pw.Divider(thickness: 1),
+              
+              // === INFO ===
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text("Inv #${billId.substring(billId.length - 6)}", style: const pw.TextStyle(fontSize: 9)),
+                  pw.Text("${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year} ${DateTime.now().hour}:${DateTime.now().minute}", style: const pw.TextStyle(fontSize: 9)),
+                ],
+              ),
+              pw.Divider(thickness: 1),
+              pw.SizedBox(height: 5),
+              
+              // === ITEMS TABLE ===
               pw.TableHelper.fromTextArray(
                 context: context,
                 headers: ['Item', 'Qty', 'Amt'],
+                columnWidths: {
+                  0: const pw.FlexColumnWidth(3),
+                  1: const pw.FlexColumnWidth(1),
+                  2: const pw.FlexColumnWidth(2),
+                },
                 headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10),
                 cellStyle: const pw.TextStyle(fontSize: 9),
                 cellAlignment: pw.Alignment.centerLeft,
+                headerDecoration: const pw.BoxDecoration(border: null),
                 border: null,
                 data: items.map((i) => [
-                  i.name,
+                  i.name.length > 15 ? "${i.name.substring(0, 15)}.." : i.name,
                   i.qty.toString(),
                   Formatter.formatCurrency(i.price * i.qty),
                 ]).toList(),
               ),
-              pw.Divider(),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.end,
-                children: [
-                   pw.Text("TOTAL: Rs ${Formatter.formatCurrency(total)}", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
-                ],
+              
+              pw.SizedBox(height: 8),
+              pw.Divider(thickness: 1, color: PdfColors.grey),
+              
+              // === TOTALS ===
+              pw.Container(
+                alignment: pw.Alignment.centerRight,
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text("Subtotal:  ${Formatter.formatCurrency(subTotal)}", style: const pw.TextStyle(fontSize: 10)),
+                    if (discount > 0)
+                      pw.Text("Discount: -${Formatter.formatCurrency(discount)}", style: const pw.TextStyle(fontSize: 10, color: PdfColors.black)),
+                    pw.SizedBox(height: 4),
+                    pw.Text(
+                      "TOTAL: ${Formatter.formatCurrency(finalTotal)}", 
+                      style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)
+                    ),
+                  ],
+                ),
               ),
+              
+              pw.Divider(thickness: 1),
+              pw.SizedBox(height: 10),
+              
+              // === FOOTER ===
+              pw.Text("Thank you for your business!", style: const pw.TextStyle(fontSize: 10, fontStyle: pw.FontStyle.italic)),
+              pw.Text("No Return / No Exchange", style: const pw.TextStyle(fontSize: 8)),
               pw.SizedBox(height: 20),
-              pw.Center(child: pw.Text("Thank You for Shopping!", style: const pw.TextStyle(fontSize: 10, fontStyle: pw.FontStyle.italic))),
             ],
           );
         },

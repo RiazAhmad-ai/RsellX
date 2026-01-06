@@ -177,6 +177,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
     final stockCtrl = TextEditingController(text: item.stock.toString());
     final barcodeCtrl = TextEditingController(text: item.barcode);
+    final categoryCtrl = TextEditingController(text: item.category);
+    final sizeCtrl = TextEditingController(text: item.size);
     final thresholdCtrl = TextEditingController(
       text: item.lowStockThreshold.toString(),
     );
@@ -294,6 +296,45 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     hint: "Enter product name",
                     icon: Icons.shopping_bag_outlined,
                     iconColor: AppColors.accent,
+                  ),
+
+                  const SizedBox(height: 20),
+                  
+                  // Category & Size Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildSectionLabel("CATEGORY", Icons.category),
+                            const SizedBox(height: 10),
+                            _buildStyledTextField(
+                              controller: categoryCtrl,
+                              hint: "General",
+                              icon: Icons.grid_view,
+                              iconColor: Colors.purple,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildSectionLabel("SIZE", Icons.straighten),
+                            const SizedBox(height: 10),
+                            _buildStyledTextField(
+                              controller: sizeCtrl,
+                              hint: "N/A",
+                              icon: Icons.format_size,
+                              iconColor: Colors.orange,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
 
                   const SizedBox(height: 20),
@@ -508,6 +549,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               item.stock =
                                   int.tryParse(stockCtrl.text) ?? item.stock;
                               item.barcode = barcodeCtrl.text.trim();
+                              item.category = categoryCtrl.text.trim().isEmpty ? "General" : categoryCtrl.text.trim();
+                              item.size = sizeCtrl.text.trim().isEmpty ? "N/A" : sizeCtrl.text.trim();
                               item.lowStockThreshold =
                                   int.tryParse(thresholdCtrl.text) ??
                                   item.lowStockThreshold;
@@ -829,9 +872,32 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      subtitle: Text(
-                        "Rs ${item.price.toStringAsFixed(0)} | Code: ${item.barcode}",
-                        style: AppTextStyles.bodySmall,
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Rs ${item.price.toStringAsFixed(0)} | Code: ${item.barcode}",
+                            style: AppTextStyles.bodySmall,
+                          ),
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 8,
+                            children: [
+                              if (item.category != "General")
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                                  child: Text(item.category, style: const TextStyle(fontSize: 10, color: Colors.purple, fontWeight: FontWeight.bold)),
+                                ),
+                              if (item.size != "N/A")
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                                  child: Text("Size: ${item.size}", style: const TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.bold)),
+                                ),
+                            ],
+                          ),
+                        ],
                       ),
                       trailing: Container(
                         padding: const EdgeInsets.symmetric(

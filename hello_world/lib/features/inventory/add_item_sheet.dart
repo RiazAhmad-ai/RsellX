@@ -15,6 +15,8 @@ class AddItemSheet extends StatefulWidget {
 
 class _AddItemSheetState extends State<AddItemSheet> {
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _categoryController = TextEditingController();
+  final TextEditingController _sizeController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _stockController = TextEditingController(text: "1");
   final TextEditingController _descController = TextEditingController();
@@ -310,6 +312,8 @@ class _AddItemSheetState extends State<AddItemSheet> {
         description: _descController.text.isEmpty ? null : _descController.text,
         barcode: _barcodeController.text.trim(),
         lowStockThreshold: int.tryParse(_thresholdController.text) ?? 5,
+        category: _categoryController.text.trim().isEmpty ? "General" : _categoryController.text.trim(),
+        size: _sizeController.text.trim().isEmpty ? "N/A" : _sizeController.text.trim(),
       );
 
       context.read<InventoryProvider>().addInventoryItem(newItem);
@@ -427,6 +431,39 @@ class _AddItemSheetState extends State<AddItemSheet> {
                 fillColor: Colors.grey[100],
               ),
             ),
+            const SizedBox(height: 12),
+            
+            // Category and Size
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _categoryController,
+                    decoration: InputDecoration(
+                      hintText: "Category",
+                      prefixIcon: const Icon(Icons.category),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _sizeController,
+                    decoration: InputDecoration(
+                      hintText: "Size",
+                      prefixIcon: const Icon(Icons.straighten),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
             const SizedBox(height: 12),
 
             Row(

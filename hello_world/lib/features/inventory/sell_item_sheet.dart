@@ -39,8 +39,16 @@ class _SellItemSheetState extends State<SellItemSheet> {
   }
 
   void _addToCart() {
+    if (_salePriceController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter Sale Price!"), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
     final double salePrice = double.tryParse(_salePriceController.text) ?? widget.item.price;
-    if (widget.item.stock >= _sellQty && _salePriceController.text.isNotEmpty) {
+    
+    if (widget.item.stock >= _sellQty) {
       final sale = SaleRecord(
         id: "sale_${DateTime.now().millisecondsSinceEpoch}",
         itemId: widget.item.id,
@@ -50,20 +58,30 @@ class _SellItemSheetState extends State<SellItemSheet> {
         qty: _sellQty,
         profit: (salePrice - widget.item.price) * _sellQty,
         date: DateTime.now(),
+        category: widget.item.category,
+        size: widget.item.size,
       );
 
       context.read<SalesProvider>().addToCart(sale);
       Navigator.pop(context, "ADD_MORE");
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a valid sale price")),
+        const SnackBar(content: Text("Insufficient stock for this quantity!")),
       );
     }
   }
 
   void _confirmSell() {
+    if (_salePriceController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter Sale Price!"), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
     final double salePrice = double.tryParse(_salePriceController.text) ?? widget.item.price;
-    if (widget.item.stock >= _sellQty && _salePriceController.text.isNotEmpty) {
+    
+    if (widget.item.stock >= _sellQty) {
       final sale = SaleRecord(
         id: "sale_${DateTime.now().millisecondsSinceEpoch}",
         itemId: widget.item.id,
@@ -73,13 +91,15 @@ class _SellItemSheetState extends State<SellItemSheet> {
         qty: _sellQty,
         profit: (salePrice - widget.item.price) * _sellQty,
         date: DateTime.now(),
+        category: widget.item.category,
+        size: widget.item.size,
       );
 
       context.read<SalesProvider>().addToCart(sale);
       Navigator.pop(context, "VIEW_CART");
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a valid sale price")),
+        const SnackBar(content: Text("Insufficient stock for this quantity!")),
       );
     }
   }
@@ -131,6 +151,25 @@ class _SellItemSheetState extends State<SellItemSheet> {
                       color: widget.item.stock < widget.item.lowStockThreshold ? Colors.red : Colors.grey,
                       fontWeight: FontWeight.bold,
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      if (widget.item.category != "General")
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                          child: Text(widget.item.category, style: const TextStyle(fontSize: 11, color: Colors.purple, fontWeight: FontWeight.bold)),
+                        ),
+                      if (widget.item.size != "N/A")
+                        Container(
+                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                           decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+                           child: Text("Size: ${widget.item.size}", style: const TextStyle(fontSize: 11, color: Colors.orange, fontWeight: FontWeight.bold)),
+                        ),
+                    ],
                   ),
                 ],
               ),
