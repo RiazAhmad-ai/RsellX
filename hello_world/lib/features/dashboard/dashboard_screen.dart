@@ -13,8 +13,8 @@ import 'package:rsellx/providers/settings_provider.dart';
 import '../../shared/utils/formatting.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
-
-
+import '../inventory/damage_screen.dart';
+import '../barcode/barcode_generator_screen.dart';
 import '../cart/cart_screen.dart';
 import '../credit/credit_screen.dart';
 import 'package:rsellx/providers/expense_provider.dart';
@@ -27,19 +27,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  // Default filter logic
   String _filter = "Weekly";
-
-  @override
-  void initState() {
-    super.initState();
-    // Use context.read in initState if needed, but watch in build handles updates
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,10 +35,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final salesProvider = context.watch<SalesProvider>();
     final settingsProvider = context.watch<SettingsProvider>();
 
-    // 1. Calculate Total Stock Value (Real Data)
     double totalStockValue = inventoryProvider.getTotalStockValue();
-
-    // 2. Get Analytics Data (Real Data from History & Expenses)
     final analyticsData = salesProvider.getAnalytics(_filter);
 
     return Scaffold(
@@ -68,7 +53,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       height: 40,
                       width: 40,
                       fit: BoxFit.cover,
-                      key: ValueKey(settingsProvider.logoPath), // Instant update key
+                      key: ValueKey(settingsProvider.logoPath),
                     )
                   : Image.asset(
                       'assets/logo.png',
@@ -82,11 +67,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           color: AppColors.primary.withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
-                          Icons.storefront,
-                          color: AppColors.primary,
-                          size: 24,
-                        ),
+                        child: const Icon(Icons.storefront, color: AppColors.primary, size: 24),
                       ),
                     ),
             ),
@@ -95,34 +76,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    settingsProvider.shopName,
-                    style: AppTextStyles.h3.copyWith(fontSize: 15),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
-                  Text(
-                    settingsProvider.address,
-                    style: AppTextStyles.label.copyWith(fontSize: 9),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
+                  Text(settingsProvider.shopName, style: AppTextStyles.h3.copyWith(fontSize: 15), overflow: TextOverflow.ellipsis, maxLines: 1),
+                  Text(settingsProvider.address, style: AppTextStyles.label.copyWith(fontSize: 9), overflow: TextOverflow.ellipsis, maxLines: 1),
                 ],
               ),
             ),
           ],
         ),
         actions: [
-          // KHATA BUTTON
           IconButton(
             icon: const Icon(Icons.menu_book_rounded, color: Colors.black),
-            tooltip: "Khata (Credit)",
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const CreditScreen()),
-              );
-            },
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const CreditScreen())),
           ),
           Consumer<SalesProvider>(
             builder: (context, sales, _) {
@@ -132,12 +96,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.shopping_cart_outlined, color: Colors.black),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const CartScreen()),
-                      );
-                    },
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const CartScreen())),
                   ),
                   if (cartCount > 0)
                     Positioned(
@@ -146,10 +105,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                        child: Text(
-                          "$cartCount",
-                          style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
-                        ),
+                        child: Text("$cartCount", style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
                       ),
                     ),
                 ],
@@ -158,12 +114,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined, color: Colors.black),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              );
-            },
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen())),
           ),
           const SizedBox(width: 10),
         ],
@@ -176,54 +127,82 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // === FILTER BUTTONS ===
                 FilterButtons(
                   selectedFilter: _filter,
-                  onFilterChanged: (newFilter) {
-                    setState(() {
-                      _filter = newFilter;
-                    });
-                  },
+                  onFilterChanged: (newFilter) => setState(() => _filter = newFilter),
                 ),
-
                 const SizedBox(height: 20),
-
-                // === FIXED STOCK CARD (Blue) ===
                 OverviewCard(
                   title: "TOTAL STOCK VALUE",
-                  amount:
-                      "Rs ${Formatter.formatCurrency(totalStockValue)}", // DYNAMIC
+                  amount: "Rs ${Formatter.formatCurrency(totalStockValue)}",
+                  damageAmount: Formatter.formatCurrency(inventoryProvider.getTotalDamageLoss()),
+                  footerText: "Exact Total: Rs ${Formatter.formatCurrency(totalStockValue - inventoryProvider.getTotalDamageLoss())}",
                   icon: Icons.inventory_2,
                 ),
-
-
-
                 const SizedBox(height: 20),
-
-                // === ALERT CARD (Low Stock) ===
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildQuickAction(
+                        context,
+                        title: "Damage Tracker",
+                        icon: Icons.broken_image_outlined,
+                        color: Colors.red,
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const DamageScreen())),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildQuickAction(
+                        context,
+                        title: "Barcodes",
+                        icon: Icons.qr_code_2,
+                        color: Colors.blue,
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const BarcodeGeneratorScreen())),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
                 const AlertCard(),
-
                 const SizedBox(height: 20),
-
-                // === ALL-IN-ONE ANALYTICS CARD (Sales, Profit, Expense) ===
-                // Updated to accept 'chartData' map
                 AnalysisChart(
-                  key: ValueKey("chart_${_filter}_${salesProvider.historyItems.length}_${salesProvider.cartCount}"),
+                  key: ValueKey("chart_${_filter}_${salesProvider.historyItems.length}"),
                   title: "$_filter Overview",
-                  chartData: analyticsData, // <--- Passing Real Data Here
+                  chartData: analyticsData,
                 ),
-
                 const SizedBox(height: 20),
-
-                // === TOP MOVING PRODUCTS ===
-                TopProductsChart(
-                  data: salesProvider.getTopSellingProducts(),
-                ),
-
+                TopProductsChart(data: salesProvider.getTopSellingProducts()),
                 const SizedBox(height: 40),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickAction(BuildContext context, {required String title, required IconData icon, required Color color, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(height: 8),
+            Text(title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87), textAlign: TextAlign.center),
+          ],
         ),
       ),
     );

@@ -457,10 +457,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
         title: Text("Stock Inventory", style: AppTextStyles.h2),
         actions: [
           IconButton(
-            icon: const Icon(Icons.qr_code_2, color: AppColors.primary),
-             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BarcodeGeneratorScreen())),
-          ),
-          IconButton(
             icon: const Icon(Icons.table_view_rounded, color: AppColors.success),
             onPressed: () => ReportingService.generateInventoryExcel(shopName: settingsProvider.shopName, items: inventoryProvider.inventory),
           ),

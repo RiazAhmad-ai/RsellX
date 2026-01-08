@@ -4,6 +4,7 @@ import '../../data/models/inventory_model.dart';
 import '../../data/models/sale_model.dart';
 import '../../data/models/expense_model.dart';
 import '../../data/models/credit_model.dart';
+import '../../data/models/damage_model.dart';
 import 'logger_service.dart';
 
 class DatabaseService {
@@ -27,6 +28,7 @@ class DatabaseService {
       if (!Hive.isAdapterRegistered(1)) Hive.registerAdapter(SaleRecordAdapter());
       if (!Hive.isAdapterRegistered(2)) Hive.registerAdapter(ExpenseItemAdapter());
       if (!Hive.isAdapterRegistered(3)) Hive.registerAdapter(CreditRecordAdapter());
+      if (!Hive.isAdapterRegistered(4)) Hive.registerAdapter(DamageRecordAdapter());
     } catch (e) {
       AppLogger.error("Adapter Registration Failed", error: e);
     }
@@ -38,6 +40,7 @@ class DatabaseService {
     await Hive.openBox<SaleRecord>('cartBox');
     await Hive.openBox<ExpenseItem>('expensesBox');
     await Hive.openBox<CreditRecord>('creditsBox');
+    await Hive.openBox<DamageRecord>('damageBox');
     await Hive.openBox('settingsBox');
   }
 

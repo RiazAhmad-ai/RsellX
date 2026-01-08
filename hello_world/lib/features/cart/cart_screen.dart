@@ -8,6 +8,7 @@ import '../../shared/utils/formatting.dart';
 import '../../core/services/reporting_service.dart';
 import '../../data/models/sale_model.dart';
 import 'package:flutter/services.dart';
+import 'package:pdf/pdf.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -18,6 +19,7 @@ class CartScreen extends StatefulWidget {
 
 class _CartScreenState extends State<CartScreen> {
   bool _shouldPrintInvoice = false;
+  String _paperSize = "80mm";
   final _discountCtrl = TextEditingController();
   double _discount = 0.0;
 
@@ -210,26 +212,49 @@ class _CartScreenState extends State<CartScreen> {
                     
                     // INVOICE TOGGLE
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
                         color: AppColors.background,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      child: Column(
                         children: [
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Icon(Icons.receipt_long, color: AppColors.primary, size: 20),
-                              const SizedBox(width: 10),
-                              Text("Generate Invoice", style: AppTextStyles.bodyMedium),
+                              Row(
+                                children: [
+                                  const Icon(Icons.receipt_long, color: AppColors.primary, size: 20),
+                                  const SizedBox(width: 10),
+                                  Text("Generate Invoice", style: AppTextStyles.bodyMedium),
+                                ],
+                              ),
+                              Switch(
+                                value: _shouldPrintInvoice,
+                                activeColor: AppColors.secondary,
+                                onChanged: (val) => setState(() => _shouldPrintInvoice = val),
+                              ),
                             ],
                           ),
-                          Switch(
-                            value: _shouldPrintInvoice,
-                            activeColor: AppColors.secondary,
-                            onChanged: (val) => setState(() => _shouldPrintInvoice = val),
-                          ),
+                          if (_shouldPrintInvoice)
+                            Row(
+                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                               children: [
+                                 const Text("Paper Size:", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                 DropdownButton<String>(
+                                   value: _paperSize,
+                                   items: ["80mm", "58mm"].map((String value) {
+                                     return DropdownMenuItem<String>(
+                                       value: value,
+                                       child: Text(value, style: const TextStyle(fontSize: 12)),
+                                     );
+                                   }).toList(),
+                                   onChanged: (val) {
+                                     if (val != null) setState(() => _paperSize = val);
+                                   },
+                                 ),
+                               ],
+                            ),
                         ],
                       ),
                     ),
@@ -269,6 +294,7 @@ class _CartScreenState extends State<CartScreen> {
                                 items: cartItems,
                                 billId: billId,
                                 discount: _discount,
+                                paperFormat: _paperSize == "80mm" ? PdfPageFormat.roll80 : PdfPageFormat.roll57,
                               );
                             }
                           }

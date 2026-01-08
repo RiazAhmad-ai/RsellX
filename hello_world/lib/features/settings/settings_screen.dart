@@ -11,8 +11,6 @@ import '../../core/theme/app_text_styles.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/services/reporting_service.dart';
-import '../barcode/barcode_generator_screen.dart';
-
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -418,7 +416,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       color: Colors.red[50],
                       shape: BoxShape.circle,
                     ),
-                  child: ClipOval(
+                   child: ClipOval(
                     child: settingsProvider.logoPath != null && File(settingsProvider.logoPath!).existsSync()
                       ? Image.file(
                           File(settingsProvider.logoPath!),
@@ -547,21 +545,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             const SizedBox(height: 30),
 
-            // === TOOLS SECTION ===
-            _buildSectionHeader("Tools"),
-            _buildSettingsTile(
-              Icons.qr_code_2,
-              "Barcode Label Generator",
-              "Create & print barcode stickers",
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const BarcodeGeneratorScreen()),
-                );
-              },
-            ),
+            const SizedBox(height: 10),
 
-            const SizedBox(height: 30),
+
 
             // === 3. APP INFO ===
             _buildSectionHeader("System Information"),

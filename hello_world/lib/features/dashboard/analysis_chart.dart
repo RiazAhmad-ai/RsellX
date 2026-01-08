@@ -4,17 +4,16 @@ import 'package:flutter/services.dart';
 import '../../shared/utils/formatting.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
-import 'dart:math'; // Max value nikalne ke liye
+import 'dart:math'; 
 
 class AnalysisChart extends StatefulWidget {
   final String title;
-  // Ab hum pura data map pass karenge
   final Map<String, dynamic> chartData;
 
   const AnalysisChart({
     super.key,
     required this.title,
-    required this.chartData, // <--- Changed
+    required this.chartData, 
   });
 
   @override
@@ -24,23 +23,19 @@ class AnalysisChart extends StatefulWidget {
 class _AnalysisChartState extends State<AnalysisChart> {
   String _selectedView = "Sales";
   int? touchedIndex;
-  int? _selectedIndex; // Persist selection on click
+  int? _selectedIndex; 
 
   @override
   Widget build(BuildContext context) {
-    // Data nikalna
     List<String> labels = widget.chartData['labels'] ?? [];
-    List<double> rawValues = widget.chartData[_selectedView] ?? [];
+    List<double> rawValues = List<double>.from(widget.chartData[_selectedView] ?? []);
 
-    // Graph ki height adjust karna (Normalization)
-    double maxValue = rawValues.isEmpty ? 1 : rawValues.reduce(max);
-    if (maxValue == 0) maxValue = 1;
+    double maxValue = rawValues.isEmpty ? 1.0 : rawValues.reduce(max);
+    if (maxValue < 1.0) maxValue = 1.0; // Ensure positive divisor and handle losses
 
-    // Total Amount Calculate karna
     double totalSum = rawValues.fold(0, (p, c) => p + c);
     String totalAmountStr = "Rs ${Formatter.formatCurrency(totalSum)}";
 
-    // CURRENT LOGIC: Touch ko priority dein, phir selected bar ko, phir total
     int? activeIndex = touchedIndex ?? _selectedIndex;
 
     String displayAmount = (activeIndex != null && activeIndex < rawValues.length)
@@ -51,12 +46,13 @@ class _AnalysisChartState extends State<AnalysisChart> {
         ? "${labels[activeIndex]} ${_selectedView}"
         : "TOTAL ${_selectedView.toUpperCase()}";
 
-    // Color Selection
     Color barColor = _selectedView == "Sales"
         ? AppColors.accent
         : _selectedView == "Profit"
         ? AppColors.success
-        : AppColors.error;
+        : _selectedView == "Expenses"
+        ? AppColors.error
+        : Colors.orange;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -65,9 +61,9 @@ class _AnalysisChartState extends State<AnalysisChart> {
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
@@ -81,19 +77,22 @@ class _AnalysisChartState extends State<AnalysisChart> {
               Text(
                 widget.title.toUpperCase(),
                 style: AppTextStyles.label.copyWith(
-                  color: Colors.grey,
-                  letterSpacing: 1.5,
+                  color: Colors.grey[400],
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                  fontSize: 10,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Flexible(
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.grey[100]!),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -101,6 +100,7 @@ class _AnalysisChartState extends State<AnalysisChart> {
                         _buildToggleButton("Sales"),
                         _buildToggleButton("Profit"),
                         _buildToggleButton("Expenses"),
+                        _buildToggleButton("Damage"),
                       ],
                     ),
                   ),
@@ -108,22 +108,32 @@ class _AnalysisChartState extends State<AnalysisChart> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
           // === AMOUNT DISPLAY ===
-          Text(
-            displayAmount,
-            style: AppTextStyles.h1.copyWith(fontSize: 32),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: Text(
+                  displayAmount,
+                  key: ValueKey(displayAmount),
+                  style: AppTextStyles.h1.copyWith(fontSize: 28, letterSpacing: -0.5),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                displayLabel,
+                style: AppTextStyles.label.copyWith(color: Colors.grey, fontSize: 11),
+              ),
+            ],
           ),
-          Text(
-            displayLabel,
-            style: AppTextStyles.label,
-          ),
-          const SizedBox(height: 30),
+          const SizedBox(height: 32),
 
           // === BARS ===
           SizedBox(
-            height: 180,
+            height: 180, // Increased from 160
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -132,72 +142,33 @@ class _AnalysisChartState extends State<AnalysisChart> {
                 bool isSelected = _selectedIndex == index;
                 bool isActive = isTouched || isSelected;
 
-                // === REAL LOGIC ===
-                double percentage = rawValues[index] / maxValue;
-                double barHeight = 140 * percentage;
-                if (barHeight < 5) barHeight = 5;
+                double percentage = (rawValues[index] / maxValue).clamp(0.0, 1.0);
+                double barHeight = (130.0 * percentage).clamp(5.0, 130.0);
 
-                return GestureDetector(
+                return AnimatedKeyedBar(
+                  key: ValueKey("bar_${_selectedView}_$index"),
+                  barHeight: barHeight,
+                  barColor: barColor,
+                  isActive: isActive,
+                  label: labels[index],
                   onTap: () {
                     HapticFeedback.selectionClick();
                     setState(() {
-                      if (_selectedIndex == index) {
-                        _selectedIndex = null; // Unselect if already selected
-                      } else {
-                        _selectedIndex = index; // Select new
-                      }
+                      _selectedIndex = (_selectedIndex == index) ? null : index;
                     });
                   },
-                  onTapDown: (_) => setState(() => touchedIndex = index),
-                  onTapUp: (_) => setState(() => touchedIndex = null),
-                  onPanEnd: (_) => setState(() => touchedIndex = null),
+                  onTapDown: () => setState(() => touchedIndex = index),
+                  onTapUp: () => setState(() => touchedIndex = null),
                   onLongPress: () {
-                    HapticFeedback.lightImpact();
+                    HapticFeedback.heavyImpact();
                     _showDayDetails(
                       labels[index],
                       widget.chartData['Sales'][index],
                       widget.chartData['Profit'][index],
                       widget.chartData['Expenses'][index],
+                      widget.chartData['Damage'][index],
                     );
                   },
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeOut,
-                        width: isActive ? 16 : 12,
-                        height: barHeight,
-                        decoration: BoxDecoration(
-                          color: isActive
-                              ? barColor.withOpacity(1.0)
-                              : barColor.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(8),
-                          border: isSelected 
-                              ? Border.all(color: Colors.black.withOpacity(0.2), width: 2)
-                              : null,
-                          gradient: isActive
-                              ? LinearGradient(
-                                  colors: [barColor, barColor.withOpacity(0.7)],
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                )
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        index < labels.length ? labels[index] : "",
-                        style: TextStyle(
-                          color: isActive ? Colors.black : Colors.grey,
-                          fontWeight: isActive
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ],
-                  ),
                 );
               }),
             ),
@@ -207,67 +178,85 @@ class _AnalysisChartState extends State<AnalysisChart> {
     );
   }
 
-  // === NEW: DETAILED DIALOG ===
-  void _showDayDetails(String label, double s, double p, double e) {
-    showDialog(
+  void _showDayDetails(String label, double s, double p, double e, double d) {
+    showGeneralDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          "$label Summary",
-          style: AppTextStyles.h3,
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildDetailRow("Total Sales", s, AppColors.accent),
-            const Divider(),
-            _buildDetailRow("Expenses", e, AppColors.error),
-            const Divider(),
-            _buildDetailRow("Net Profit", p, AppColors.success),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(12),
+      barrierDismissible: true,
+      barrierLabel: "Details",
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, anim1, anim2) {
+        return Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.85,
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: p >= 0 ? Colors.green[50] : Colors.red[50],
-                borderRadius: BorderRadius.circular(12),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 40)],
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text("Status:", style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text(
-                    p >= 0 ? "PROFITABLE" : "LOSS",
-                    style: AppTextStyles.bodyLarge.copyWith(
-                      fontWeight: FontWeight.w900,
-                      color: p >= 0 ? AppColors.success : AppColors.error,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text("$label Report", style: AppTextStyles.h2),
+                    const SizedBox(height: 24),
+                    _buildDetailItem("Gross Sales", s, AppColors.accent, Icons.trending_up),
+                    _buildDetailItem("Expenses", e, AppColors.error, Icons.money_off),
+                    _buildDetailItem("Damage Loss", d, Colors.orange, Icons.broken_image),
+                    const Divider(height: 32),
+                    _buildDetailItem("Net Profit", p, AppColors.success, Icons.account_balance_wallet, isLarge: true),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey[900],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: const Text("DONE", style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("CLOSE", style: TextStyle(color: Colors.grey)),
           ),
-        ],
-      ),
+        );
+      },
+      transitionBuilder: (context, anim1, anim2, child) {
+        return ScaleTransition(
+          scale: CurvedAnimation(parent: anim1, curve: Curves.easeOutBack),
+          child: FadeTransition(opacity: anim1, child: child),
+        );
+      },
     );
   }
 
-  Widget _buildDetailRow(String label, double value, Color color) {
+  Widget _buildDetailItem(String label, double val, Color color, IconData icon, {bool isLarge = false}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.grey)),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 16),
+          ),
+          const SizedBox(width: 12),
+          Text(label, style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500)),
+          const Spacer(),
           Text(
-            "Rs ${Formatter.formatCurrency(value)}",
-            style: TextStyle(fontWeight: FontWeight.bold, color: color),
+            "Rs ${Formatter.formatCurrency(val)}",
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w900,
+              fontSize: isLarge ? 18 : 14,
+            ),
           ),
         ],
       ),
@@ -279,31 +268,89 @@ class _AnalysisChartState extends State<AnalysisChart> {
     return GestureDetector(
       onTap: () => setState(() {
         _selectedView = text;
-        _selectedIndex = null; // View change hone par selection reset kar dein
+        _selectedIndex = null;
       }),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: isActive ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: isActive
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 4,
-                  ),
-                ]
-              : [],
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: isActive ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))] : [],
         ),
         child: Text(
           text,
           style: TextStyle(
-            color: isActive ? Colors.black : Colors.grey,
-            fontWeight: FontWeight.bold,
+            color: isActive ? Colors.black : Colors.grey[500],
+            fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
             fontSize: 10,
           ),
         ),
+      ),
+    );
+  }
+}
+
+class AnimatedKeyedBar extends StatelessWidget {
+  final double barHeight;
+  final Color barColor;
+  final bool isActive;
+  final String label;
+  final VoidCallback onTap;
+  final VoidCallback onTapDown;
+  final VoidCallback onTapUp;
+  final VoidCallback onLongPress;
+
+  const AnimatedKeyedBar({
+    super.key,
+    required this.barHeight,
+    required this.barColor,
+    required this.isActive,
+    required this.label,
+    required this.onTap,
+    required this.onTapDown,
+    required this.onTapUp,
+    required this.onLongPress,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      onTapDown: (_) => onTapDown(),
+      onTapUp: (_) => onTapUp(),
+      onPanEnd: (_) => onTapUp(),
+      onLongPress: onLongPress,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutQuart, // SAFE CURVE: No negative dip
+            width: isActive ? 18 : 12,
+            height: barHeight,
+            decoration: BoxDecoration(
+              color: isActive ? barColor : barColor.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(6),
+              gradient: isActive
+                  ? LinearGradient(
+                      colors: [barColor, barColor.withOpacity(0.8)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    )
+                  : null,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            label,
+            style: TextStyle(
+              color: isActive ? Colors.black : Colors.grey[400],
+              fontWeight: isActive ? FontWeight.w900 : FontWeight.normal,
+              fontSize: 10,
+            ),
+          ),
+        ],
       ),
     );
   }

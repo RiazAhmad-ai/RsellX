@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/credit_model.dart';
 import '../../providers/credit_provider.dart';
+import '../../providers/settings_provider.dart';
+import '../../core/services/whatsapp_service.dart';
 import '../../shared/utils/formatting.dart';
 import '../../shared/widgets/pin_dialog.dart';
 import 'edit_credit_dialog.dart';
@@ -77,6 +79,33 @@ class CreditDetailsScreen extends StatelessWidget {
                         const Icon(Icons.phone, size: 14, color: Colors.grey),
                         const SizedBox(width: 4),
                         Text(record.phone, style: const TextStyle(color: Colors.grey)),
+                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: () {
+                            final shopName = context.read<SettingsProvider>().shopName;
+                            WhatsAppService.sendCreditReminder(
+                              phone: record.phone,
+                              name: record.name,
+                              balance: record.balance,
+                              shopName: shopName,
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.green.withOpacity(0.3)),
+                            ),
+                            child: Row(
+                              children: const [
+                                Icon(Icons.send, size: 12, color: Colors.green),
+                                SizedBox(width: 4),
+                                Text("Reminder", style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   const SizedBox(height: 24),

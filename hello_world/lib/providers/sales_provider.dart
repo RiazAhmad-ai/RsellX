@@ -3,6 +3,7 @@ import 'package:hive/hive.dart';
 import 'package:rsellx/data/models/inventory_model.dart';
 import 'package:rsellx/data/models/sale_model.dart';
 import 'package:rsellx/data/models/expense_model.dart';
+import 'package:rsellx/data/models/damage_model.dart';
 
 class SalesProvider extends ChangeNotifier {
   // === Cache ===
@@ -25,6 +26,10 @@ class SalesProvider extends ChangeNotifier {
       _analyticsCache.clear(); // Expenses affect analytics too
       notifyListeners();
     });
+    _damageBox.watch().listen((_) {
+      _analyticsCache.clear(); // Damage affects profit too
+      notifyListeners();
+    });
     
     // Initial Load
     _refreshCache();
@@ -34,6 +39,7 @@ class SalesProvider extends ChangeNotifier {
   Box<SaleRecord> get _cartBox => Hive.box<SaleRecord>('cartBox');
   Box<InventoryItem> get _inventoryBox => Hive.box<InventoryItem>('inventoryBox');
   Box<ExpenseItem> get _expensesBox => Hive.box<ExpenseItem>('expensesBox');
+  Box<DamageRecord> get _damageBox => Hive.box<DamageRecord>('damageBox');
 
   // === HISTORY ===
   // Optimized Getter
@@ -211,10 +217,7 @@ class SalesProvider extends ChangeNotifier {
     List<double> sales = [], expenses = [], profit = [];
     List<String> labels = [];
     DateTime now = DateTime.now();
-    
-    // Pre-calculate expenses map for faster lookup might be overkill for < 1000 items, but good for scale
-    // For now keeping simple iteration as it's cached now.
-
+    List<double> damage = []; 
     for (int i = 6; i >= 0; i--) {
       DateTime date = now.subtract(Duration(days: i));
       labels.add(["M", "T", "W", "T", "F", "S", "S"][date.weekday - 1]);
@@ -222,7 +225,6 @@ class SalesProvider extends ChangeNotifier {
       double daySales = 0.0;
       double dayItemProfit = 0.0;
       
-      // Use _validHistory which uses _cachedHistory
       for (var item in _validHistory) {
         if (_isSameDay(date, item.date)) {
           daySales += (item.price * item.qty);
@@ -233,16 +235,30 @@ class SalesProvider extends ChangeNotifier {
       double dayExpenses = _expensesBox.values
           .where((e) => _isSameDay(date, e.date))
           .fold(0.0, (sum, item) => sum + item.amount);
+
+      double dayDamage = _damageBox.values
+          .where((d) => _isSameDay(date, d.date))
+          .fold(0.0, (sum, item) => sum + item.lossAmount);
       
       sales.add(daySales);
       expenses.add(dayExpenses);
-      profit.add(dayItemProfit - dayExpenses);
+      damage.add(dayDamage); 
+      profit.add(dayItemProfit - dayExpenses - dayDamage);
     }
+
+    double totalSales = sales.fold(0, (a, b) => a + b);
+    double totalExp = expenses.fold(0, (a, b) => a + b);
+    double totalDmg = damage.fold(0, (a, b) => a + b);
+
     return {
       "labels": labels, 
       "Sales": sales, 
       "Expenses": expenses, 
       "Profit": profit,
+      "Damage": damage,
+      "totalSales": totalSales,
+      "totalExpenses": totalExp,
+      "totalDamage": totalDmg,
     };
   }
 
@@ -250,7 +266,7 @@ class SalesProvider extends ChangeNotifier {
     List<double> sales = [], expenses = [], profit = [];
     List<String> labels = ["W1", "W2", "W3", "W4"];
     DateTime now = DateTime.now();
-
+    List<double> damage = [];
     for (int i = 3; i >= 0; i--) {
       DateTime end = now.subtract(Duration(days: i * 7));
       DateTime start = end.subtract(const Duration(days: 7));
@@ -258,6 +274,7 @@ class SalesProvider extends ChangeNotifier {
       double periodSales = 0.0;
       double periodItemProfit = 0.0;
       double periodExpenses = 0.0;
+      double periodDamage = 0.0;
 
       for (var item in _validHistory) {
         if (item.date.isAfter(start) && item.date.isBefore(end.add(const Duration(seconds: 1)))) {
@@ -272,15 +289,31 @@ class SalesProvider extends ChangeNotifier {
         }
       }
 
+      for (var dmg in _damageBox.values) {
+        if (dmg.date.isAfter(start) && dmg.date.isBefore(end.add(const Duration(seconds: 1)))) {
+          periodDamage += dmg.lossAmount;
+        }
+      }
+
       sales.add(periodSales);
       expenses.add(periodExpenses);
-      profit.add(periodItemProfit - periodExpenses);
+      damage.add(periodDamage); 
+      profit.add(periodItemProfit - periodExpenses - periodDamage);
     }
+
+    double totalSales = sales.fold(0, (a, b) => a + b);
+    double totalExp = expenses.fold(0, (a, b) => a + b);
+    double totalDmg = damage.fold(0, (a, b) => a + b);
+
     return {
       "labels": labels, 
       "Sales": sales, 
       "Expenses": expenses, 
       "Profit": profit,
+      "Damage": damage,
+      "totalSales": totalSales,
+      "totalExpenses": totalExp,
+      "totalDamage": totalDmg,
     };
   }
 
@@ -288,11 +321,12 @@ class SalesProvider extends ChangeNotifier {
     List<double> sales = [], expenses = [], profit = [];
     List<String> labels = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
     int currentYear = DateTime.now().year;
-
+    List<double> damage = [];
     for (int m = 1; m <= 12; m++) {
       double monthSales = 0.0;
       double monthItemProfit = 0.0;
       double monthExpenses = 0.0;
+      double monthDamage = 0.0;
 
       for (var item in _validHistory) {
         if (item.date.year == currentYear && item.date.month == m) {
@@ -307,15 +341,31 @@ class SalesProvider extends ChangeNotifier {
         }
       }
 
+      for (var dmg in _damageBox.values) {
+        if (dmg.date.year == currentYear && dmg.date.month == m) {
+          monthDamage += dmg.lossAmount;
+        }
+      }
+
       sales.add(monthSales);
       expenses.add(monthExpenses);
-      profit.add(monthItemProfit - monthExpenses);
+      damage.add(monthDamage); 
+      profit.add(monthItemProfit - monthExpenses - monthDamage);
     }
+
+    double totalSales = sales.fold(0, (a, b) => a + b);
+    double totalExp = expenses.fold(0, (a, b) => a + b);
+    double totalDmg = damage.fold(0, (a, b) => a + b);
+
     return {
       "labels": labels, 
       "Sales": sales, 
       "Expenses": expenses, 
       "Profit": profit,
+      "Damage": damage,
+      "totalSales": totalSales,
+      "totalExpenses": totalExp,
+      "totalDamage": totalDmg,
     };
   }
 
