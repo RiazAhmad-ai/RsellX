@@ -37,6 +37,9 @@ class InventoryItem extends HiveObject {
   @HiveField(11)
   late String subCategory;
 
+  @HiveField(12)
+  String? imagePath;
+
   InventoryItem({
     required this.id,
     required this.name,
@@ -49,5 +52,6 @@ class InventoryItem extends HiveObject {
     this.size = "N/A",
     this.weight = "N/A",
     this.subCategory = "N/A",
+    this.imagePath,
   });
 }

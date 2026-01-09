@@ -1,4 +1,5 @@
 // lib/features/inventory/sell_item_sheet.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:rsellx/providers/sales_provider.dart';
 import 'package:provider/provider.dart';
@@ -126,68 +127,91 @@ class _SellItemSheetState extends State<SellItemSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Product Image / Icon
               Container(
-                padding: const EdgeInsets.all(12),
+                width: 60,
+                height: 60,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: widget.item.imagePath == null 
+                      ? AppColors.primary.withOpacity(0.1)
+                      : null,
                   borderRadius: BorderRadius.circular(12),
+                  border: widget.item.imagePath != null 
+                      ? Border.all(color: Colors.grey[300]!, width: 1)
+                      : null,
+                  image: widget.item.imagePath != null && File(widget.item.imagePath!).existsSync()
+                      ? DecorationImage(
+                          image: FileImage(File(widget.item.imagePath!)),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
                 ),
-                child: const Icon(
-                  Icons.shopping_cart_checkout,
-                  color: AppColors.primary,
-                ),
+                child: widget.item.imagePath == null || !File(widget.item.imagePath!).existsSync()
+                    ? const Icon(
+                        Icons.shopping_cart_checkout,
+                        color: AppColors.primary,
+                        size: 28,
+                      )
+                    : null,
               ),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.item.name,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.item.name,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  Text(
-                    "Stock Remaining: ${widget.item.stock}",
-                    style: TextStyle(
-                      color: widget.item.stock < widget.item.lowStockThreshold ? Colors.red : Colors.grey,
-                      fontWeight: FontWeight.bold,
+                    const SizedBox(height: 4),
+                    Text(
+                      "Stock: ${widget.item.stock}",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: widget.item.stock < widget.item.lowStockThreshold ? Colors.red : Colors.grey[600],
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      if (widget.item.category != "General")
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-                          child: Text(widget.item.category, style: const TextStyle(fontSize: 11, color: Colors.purple, fontWeight: FontWeight.bold)),
-                        ),
-                      if (widget.item.subCategory != "N/A")
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(color: Colors.indigo.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-                          child: Text(widget.item.subCategory, style: const TextStyle(fontSize: 11, color: Colors.indigo, fontWeight: FontWeight.bold)),
-                        ),
-                      if (widget.item.size != "N/A")
-                        Container(
-                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                           decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-                           child: Text("Size: ${widget.item.size}", style: const TextStyle(fontSize: 11, color: Colors.orange, fontWeight: FontWeight.bold)),
-                        ),
-                      if (widget.item.weight != "N/A")
-                        Container(
-                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                           decoration: BoxDecoration(color: Colors.teal.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-                           child: Text("Weight: ${widget.item.weight}", style: const TextStyle(fontSize: 11, color: Colors.teal, fontWeight: FontWeight.bold)),
-                        ),
-                    ],
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        if (widget.item.category != "General")
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                            decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                            child: Text(widget.item.category, style: const TextStyle(fontSize: 10, color: Colors.purple, fontWeight: FontWeight.bold)),
+                          ),
+                        if (widget.item.subCategory != "N/A")
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                            decoration: BoxDecoration(color: Colors.indigo.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                            child: Text(widget.item.subCategory, style: const TextStyle(fontSize: 10, color: Colors.indigo, fontWeight: FontWeight.bold)),
+                          ),
+                        if (widget.item.size != "N/A")
+                          Container(
+                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                             decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                             child: Text(widget.item.size, style: const TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.bold)),
+                          ),
+                        if (widget.item.weight != "N/A")
+                          Container(
+                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                             decoration: BoxDecoration(color: Colors.teal.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                             child: Text(widget.item.weight, style: const TextStyle(fontSize: 10, color: Colors.teal, fontWeight: FontWeight.bold)),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

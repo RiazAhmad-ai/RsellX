@@ -28,13 +28,14 @@ class InventoryItemAdapter extends TypeAdapter<InventoryItem> {
       size: fields[9] == null ? "N/A" : fields[9] as String,
       weight: fields[10] == null ? "N/A" : fields[10] as String,
       subCategory: fields[11] == null ? "N/A" : fields[11] as String,
+      imagePath: fields[12] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, InventoryItem obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -56,7 +57,9 @@ class InventoryItemAdapter extends TypeAdapter<InventoryItem> {
       ..writeByte(10)
       ..write(obj.weight)
       ..writeByte(11)
-      ..write(obj.subCategory);
+      ..write(obj.subCategory)
+      ..writeByte(12)
+      ..write(obj.imagePath);
   }
 
   @override

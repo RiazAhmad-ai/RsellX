@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:rsellx/providers/inventory_provider.dart';
 import 'package:rsellx/providers/settings_provider.dart';
 import '../../shared/widgets/full_scanner_screen.dart';
@@ -206,77 +209,251 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final sizeCtrl = TextEditingController(text: item.size);
     final weightCtrl = TextEditingController(text: item.weight);
     final thresholdCtrl = TextEditingController(text: item.lowStockThreshold.toString());
+    String? editImagePath = item.imagePath;
+    final imagePicker = ImagePicker();
+
+    Future<String> saveImageToAppDir(String tempPath) async {
+      final appDir = await getApplicationDocumentsDirectory();
+      final fileName = 'product_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final savedImage = await File(tempPath).copy('${appDir.path}/$fileName');
+      return savedImage.path;
+    }
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Container(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.85,
-          ),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-          ),
-          child: SingleChildScrollView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 24, top: 16, left: 24, right: 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 50,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          
+          void pickImage() {
+            showModalBottomSheet(
+              context: context,
+              backgroundColor: Colors.white,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              builder: (ctx) => SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(14),
+                        width: 40,
+                        height: 4,
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [AppColors.accent.withOpacity(0.8), AppColors.accent],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.accent.withOpacity(0.3),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text("Change Product Image", style: AppTextStyles.h3),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          GestureDetector(
+                            onTap: () async {
+                              Navigator.pop(ctx);
+                              final XFile? image = await imagePicker.pickImage(
+                                source: ImageSource.camera,
+                                imageQuality: 70,
+                                maxWidth: 800,
+                              );
+                              if (image != null) {
+                                final savedPath = await saveImageToAppDir(image.path);
+                                setModalState(() {
+                                  editImagePath = savedPath;
+                                });
+                              }
+                            },
+                            child: Column(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.accent.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: const Icon(Icons.camera_alt, color: AppColors.accent, size: 32),
+                                ),
+                                const SizedBox(height: 8),
+                                const Text("Camera", style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold)),
+                              ],
                             ),
-                          ],
-                        ),
-                        child: const Icon(Icons.edit_note, color: Colors.white, size: 28),
+                          ),
+                          GestureDetector(
+                            onTap: () async {
+                              Navigator.pop(ctx);
+                              final XFile? image = await imagePicker.pickImage(
+                                source: ImageSource.gallery,
+                                imageQuality: 70,
+                                maxWidth: 800,
+                              );
+                              if (image != null) {
+                                final savedPath = await saveImageToAppDir(image.path);
+                                setModalState(() {
+                                  editImagePath = savedPath;
+                                });
+                              }
+                            },
+                            child: Column(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.success.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: const Icon(Icons.photo_library, color: AppColors.success, size: 32),
+                                ),
+                                const SizedBox(height: 8),
+                                const Text("Gallery", style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                          if (editImagePath != null)
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.pop(ctx);
+                                setModalState(() {
+                                  editImagePath = null;
+                                });
+                              },
+                              child: Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.error.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: const Icon(Icons.delete, color: AppColors.error, size: 32),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text("Remove", style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            ),
+                        ],
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("Edit Product", style: AppTextStyles.h2),
-                            const SizedBox(height: 4),
-                            Text("Update item details below", style: TextStyle(color: Colors.grey[500], fontSize: 13)),
-                          ],
-                        ),
-                      ),
+                      const SizedBox(height: 16),
                     ],
                   ),
-                  const SizedBox(height: 28),
+                ),
+              ),
+            );
+          }
+
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.85,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              ),
+              child: SingleChildScrollView(
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 24, top: 16, left: 24, right: 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 50,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Product Image (Editable)
+                          GestureDetector(
+                            onTap: pickImage,
+                            child: Container(
+                              width: 70,
+                              height: 70,
+                              decoration: BoxDecoration(
+                                gradient: editImagePath == null
+                                    ? LinearGradient(
+                                        colors: [AppColors.accent.withOpacity(0.8), AppColors.accent],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      )
+                                    : null,
+                                borderRadius: BorderRadius.circular(16),
+                                border: editImagePath != null
+                                    ? Border.all(color: AppColors.success, width: 2)
+                                    : null,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.accent.withOpacity(0.3),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                                image: editImagePath != null && File(editImagePath!).existsSync()
+                                    ? DecorationImage(
+                                        image: FileImage(File(editImagePath!)),
+                                        fit: BoxFit.cover,
+                                      )
+                                    : null,
+                              ),
+                              child: Stack(
+                                children: [
+                                  if (editImagePath == null || !File(editImagePath!).existsSync())
+                                    const Center(
+                                      child: Icon(Icons.inventory_2, color: Colors.white, size: 28),
+                                    ),
+                                  Positioned(
+                                    bottom: 4,
+                                    right: 4,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(8),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.1),
+                                            blurRadius: 4,
+                                          ),
+                                        ],
+                                      ),
+                                      child: Icon(Icons.camera_alt, color: AppColors.accent, size: 14),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("Edit Product", style: AppTextStyles.h2),
+                                const SizedBox(height: 4),
+                                Text("Tap image to change photo", style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 28),
                   
                   _buildSectionLabel("BARCODE / SKU", Icons.qr_code),
                   const SizedBox(height: 10),
@@ -437,6 +614,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               item.size = sizeCtrl.text.trim().isEmpty ? "N/A" : sizeCtrl.text.trim();
                               item.weight = weightCtrl.text.trim().isEmpty ? "N/A" : weightCtrl.text.trim();
                               item.lowStockThreshold = int.tryParse(thresholdCtrl.text) ?? item.lowStockThreshold;
+                              item.imagePath = editImagePath;
                               item.save();
                               Navigator.pop(context);
                             },
@@ -456,6 +634,69 @@ class _InventoryScreenState extends State<InventoryScreen> {
               ),
             ),
           ),
+        ),
+      );
+      },
+      ),
+    );
+  }
+
+  // === 5. IMAGE PREVIEW ===
+  void _showImagePreview(String imagePath, String productName) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Image Container
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Image.file(
+                File(imagePath),
+                fit: BoxFit.contain,
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Name Chip
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.inventory_2, size: 18, color: AppColors.accent),
+                  const SizedBox(width: 8),
+                  Text(
+                    productName,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Close Button
+            IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.cancel, color: Colors.white, size: 40),
+            ),
+          ],
         ),
       ),
     );
@@ -730,19 +971,37 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Product Icon
-                                Container(
-                                  width: 48, height: 48,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [AppColors.accent.withOpacity(0.2), AppColors.accent.withOpacity(0.1)],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(Icons.inventory_2_rounded, color: AppColors.accent, size: 24),
-                                ),
+                                 // Product Icon / Image
+                                 GestureDetector(
+                                   onTap: item.imagePath != null && File(item.imagePath!).existsSync()
+                                       ? () => _showImagePreview(item.imagePath!, item.name)
+                                       : null,
+                                   child: Container(
+                                     width: 52, height: 52,
+                                     decoration: BoxDecoration(
+                                       gradient: item.imagePath == null 
+                                           ? LinearGradient(
+                                               colors: [AppColors.accent.withOpacity(0.2), AppColors.accent.withOpacity(0.1)],
+                                               begin: Alignment.topLeft,
+                                               end: Alignment.bottomRight,
+                                             )
+                                           : null,
+                                       borderRadius: BorderRadius.circular(12),
+                                       border: item.imagePath != null 
+                                           ? Border.all(color: Colors.grey[300]!, width: 1)
+                                           : null,
+                                       image: item.imagePath != null && File(item.imagePath!).existsSync()
+                                           ? DecorationImage(
+                                               image: FileImage(File(item.imagePath!)),
+                                               fit: BoxFit.cover,
+                                             )
+                                           : null,
+                                     ),
+                                     child: item.imagePath == null || !File(item.imagePath!).existsSync()
+                                         ? const Icon(Icons.inventory_2_rounded, color: AppColors.accent, size: 24)
+                                         : null,
+                                   ),
+                                 ),
                                 const SizedBox(width: 12),
                                 // Name and Price
                                 Expanded(
@@ -758,7 +1017,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                       const SizedBox(height: 4),
                                       Row(
                                         children: [
-                                          Icon(Icons.currency_rupee, size: 14, color: Colors.grey[600]),
+                                          Text(
+                                            "Rs ", 
+                                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey[600])
+                                          ),
                                           Text(
                                             item.price.toStringAsFixed(0), 
                                             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey[700])

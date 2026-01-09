@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:rsellx/providers/inventory_provider.dart';
 import '../../data/models/inventory_model.dart';
 import '../../shared/widgets/full_scanner_screen.dart';
@@ -26,6 +29,128 @@ class _AddItemSheetState extends State<AddItemSheet> {
   final TextEditingController _thresholdController = TextEditingController(text: "5");
 
   bool _isSaving = false;
+  File? _selectedImage;
+  final ImagePicker _imagePicker = ImagePicker();
+
+  // === IMAGE PICKER ===
+  Future<void> _pickImage() async {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text("Add Product Image", style: AppTextStyles.h3),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildImagePickOption(
+                    icon: Icons.camera_alt,
+                    label: "Camera",
+                    color: AppColors.accent,
+                    onTap: () async {
+                      Navigator.pop(context);
+                      final XFile? image = await _imagePicker.pickImage(
+                        source: ImageSource.camera,
+                        imageQuality: 70,
+                        maxWidth: 800,
+                      );
+                      if (image != null) {
+                        final savedPath = await _saveImageToAppDir(image.path);
+                        setState(() {
+                          _selectedImage = File(savedPath);
+                        });
+                      }
+                    },
+                  ),
+                  _buildImagePickOption(
+                    icon: Icons.photo_library,
+                    label: "Gallery",
+                    color: AppColors.success,
+                    onTap: () async {
+                      Navigator.pop(context);
+                      final XFile? image = await _imagePicker.pickImage(
+                        source: ImageSource.gallery,
+                        imageQuality: 70,
+                        maxWidth: 800,
+                      );
+                      if (image != null) {
+                        final savedPath = await _saveImageToAppDir(image.path);
+                        setState(() {
+                          _selectedImage = File(savedPath);
+                        });
+                      }
+                    },
+                  ),
+                  if (_selectedImage != null)
+                    _buildImagePickOption(
+                      icon: Icons.delete,
+                      label: "Remove",
+                      color: AppColors.error,
+                      onTap: () {
+                        Navigator.pop(context);
+                        setState(() {
+                          _selectedImage = null;
+                        });
+                      },
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<String> _saveImageToAppDir(String tempPath) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final fileName = 'product_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final savedImage = await File(tempPath).copy('${appDir.path}/$fileName');
+    return savedImage.path;
+  }
+
+  Widget _buildImagePickOption({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, color: color, size: 32),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
 
   // === BARCODE SCANNER ===
   Future<void> _scanBarcode() async {
@@ -318,6 +443,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
         subCategory: _subCategoryController.text.trim().isEmpty ? "N/A" : _subCategoryController.text.trim(),
         size: _sizeController.text.trim().isEmpty ? "N/A" : _sizeController.text.trim(),
         weight: _weightController.text.trim().isEmpty ? "N/A" : _weightController.text.trim(),
+        imagePath: _selectedImage?.path,
       );
 
       context.read<InventoryProvider>().addInventoryItem(newItem);
@@ -367,9 +493,73 @@ class _AddItemSheetState extends State<AddItemSheet> {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
-            Text("ADD NEW STOCK", style: AppTextStyles.h2),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
+            
+            // Header Row: Title + Image Picker
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("ADD NEW STOCK", style: AppTextStyles.h2),
+                      const SizedBox(height: 4),
+                      Text("Fill in product details", style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                    ],
+                  ),
+                ),
+                // Image Picker Button / Preview
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: _selectedImage != null ? AppColors.success : Colors.grey[300]!,
+                        width: _selectedImage != null ? 2 : 1,
+                      ),
+                      image: _selectedImage != null
+                          ? DecorationImage(
+                              image: FileImage(_selectedImage!),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    child: _selectedImage == null
+                        ? Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.add_a_photo, color: Colors.grey[400], size: 28),
+                              const SizedBox(height: 4),
+                              Text("Add Photo", style: TextStyle(color: Colors.grey[500], fontSize: 10)),
+                            ],
+                          )
+                        : Stack(
+                            children: [
+                              Positioned(
+                                top: 4,
+                                right: 4,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.success,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(Icons.check, color: Colors.white, size: 12),
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
 
             // Barcode Field with Scan & Generate Buttons
             const Text("Barcode / Sticker Number", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
