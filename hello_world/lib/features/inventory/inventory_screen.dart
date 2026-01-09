@@ -25,6 +25,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   final ScrollController _scrollController = ScrollController();
   String _searchQuery = "";
   String? _selectedCategory; // Null means "All"
+  String? _selectedSubCategory; // Null means "All"
 
   int _currentPage = 1;
   static const int _pageSize = 20;
@@ -62,6 +63,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
       if (_selectedCategory != null && item.category != _selectedCategory) {
         return false;
       }
+      // Filter by SubCategory
+      if (_selectedSubCategory != null && item.subCategory != _selectedSubCategory) {
+        return false;
+      }
       // Filter by Search (name, barcode, category, and subcategory)
       final query = _searchQuery.toLowerCase();
       return item.name.toLowerCase().contains(query) ||
@@ -86,6 +91,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final inventoryProvider = context.read<InventoryProvider>();
     final allItems = inventoryProvider.inventory.where((item) {
       if (_selectedCategory != null && item.category != _selectedCategory) {
+        return false;
+      }
+      // Filter by SubCategory
+      if (_selectedSubCategory != null && item.subCategory != _selectedSubCategory) {
         return false;
       }
       // Filter by Search (name, barcode, category, and subcategory)
@@ -549,25 +558,43 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     ),
                   ],
                 ),
-                // Active Filter Chip
-                if (_selectedCategory != null)
+                // Active Filter Chips
+                if (_selectedCategory != null || _selectedSubCategory != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 12),
                     child: Row(
                       children: [
-                        const Text("Filtered by:", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                        const Text("Filters:", style: TextStyle(color: Colors.grey, fontSize: 12)),
                         const SizedBox(width: 8),
-                        InputChip(
-                          label: Text(_selectedCategory!, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                          backgroundColor: Colors.purple,
-                          onDeleted: () {
-                            setState(() {
-                              _selectedCategory = null;
-                            });
-                            _loadInitialData();
-                          },
-                          deleteIcon: const Icon(Icons.close, size: 16, color: Colors.white),
-                        ),
+                        if (_selectedCategory != null)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: InputChip(
+                              label: Text(_selectedCategory!, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 12)),
+                              backgroundColor: Colors.purple,
+                              onDeleted: () {
+                                setState(() {
+                                  _selectedCategory = null;
+                                });
+                                _loadInitialData();
+                              },
+                              deleteIcon: const Icon(Icons.close, size: 14, color: Colors.white),
+                              avatar: const Icon(Icons.category, size: 14, color: Colors.white),
+                            ),
+                          ),
+                        if (_selectedSubCategory != null)
+                          InputChip(
+                            label: Text(_selectedSubCategory!, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 12)),
+                            backgroundColor: Colors.indigo,
+                            onDeleted: () {
+                              setState(() {
+                                _selectedSubCategory = null;
+                              });
+                              _loadInitialData();
+                            },
+                            deleteIcon: const Icon(Icons.close, size: 14, color: Colors.white),
+                            avatar: const Icon(Icons.account_tree, size: 14, color: Colors.white),
+                          ),
                       ],
                     ),
                   ),
@@ -686,93 +713,238 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   confirmDismiss: (dir) => _confirmDelete(),
                   child: Card(
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.grey[200]!)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16), 
+                      side: BorderSide(color: Colors.grey[200]!)
+                    ),
                     margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
+                    child: InkWell(
                       onTap: () => _showEditSheet(item),
-                      leading: Container(
-                        width: 50, height: 50,
-                        decoration: BoxDecoration(color: AppColors.accent.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                        child: const Icon(Icons.inventory_2_outlined, color: AppColors.accent),
-                      ),
-                      title: Text(item.name, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold)),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("Rs ${item.price.toStringAsFixed(0)} | Code: ${item.barcode}", style: AppTextStyles.bodySmall),
-                          const SizedBox(height: 4),
-                          Wrap(
-                            spacing: 8,
-                            children: [
-                              // CLICKABLE CATEGORY CHIP
-                              if (item.category != "General")
-                                GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedCategory = item.category;
-                                      _searchController.clear();
-                                      _searchQuery = "";
-                                    });
-                                    _loadInitialData();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text("Filtered by ${item.category}"), duration: const Duration(seconds: 1)),
-                                    );
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), // Increased padding
-                                    decoration: BoxDecoration(
-                                      color: Colors.purple.withOpacity(0.15), 
-                                      borderRadius: BorderRadius.circular(8), // Larger radius
-                                      border: Border.all(color: Colors.purple.withOpacity(0.3)), // Added border
+                      borderRadius: BorderRadius.circular(16),
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Top Row: Icon, Name, Stock Badge
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Product Icon
+                                Container(
+                                  width: 48, height: 48,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [AppColors.accent.withOpacity(0.2), AppColors.accent.withOpacity(0.1)],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
                                     ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          item.category, 
-                                          style: const TextStyle(
-                                            fontSize: 12, // Increased font size
-                                            color: Colors.purple, 
-                                            fontWeight: FontWeight.bold
-                                          )
-                                        ),
-                                        const SizedBox(width: 4),
-                                        const Icon(Icons.filter_list, size: 12, color: Colors.purple), // Increased icon size
-                                      ],
-                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(Icons.inventory_2_rounded, color: AppColors.accent, size: 24),
+                                ),
+                                const SizedBox(width: 12),
+                                // Name and Price
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item.name, 
+                                        style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Icon(Icons.currency_rupee, size: 14, color: Colors.grey[600]),
+                                          Text(
+                                            item.price.toStringAsFixed(0), 
+                                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey[700])
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Icon(Icons.qr_code_2, size: 14, color: Colors.grey[500]),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            item.barcode, 
+                                            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              if (item.subCategory != "N/A")
+                                // Stock Badge
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(color: Colors.indigo.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                                  child: Text(item.subCategory, style: const TextStyle(fontSize: 10, color: Colors.indigo, fontWeight: FontWeight.bold)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: item.stock < item.lowStockThreshold 
+                                        ? AppColors.error.withOpacity(0.1) 
+                                        : AppColors.success.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        "${item.stock}",
+                                        style: TextStyle(
+                                          fontSize: 18, 
+                                          fontWeight: FontWeight.bold,
+                                          color: item.stock < item.lowStockThreshold ? AppColors.error : AppColors.success,
+                                        ),
+                                      ),
+                                      Text(
+                                        "Stock",
+                                        style: TextStyle(
+                                          fontSize: 9, 
+                                          color: item.stock < item.lowStockThreshold ? AppColors.error : AppColors.success,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              if (item.size != "N/A")
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                                  child: Text("Size: ${item.size}", style: const TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                            
+                            // Tags Row (Category, SubCategory, Size, Weight)
+                            if (item.category != "General" || item.subCategory != "N/A" || item.size != "N/A" || item.weight != "N/A")
+                              Padding(
+                                padding: const EdgeInsets.only(top: 12),
+                                child: Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    // CLICKABLE CATEGORY CHIP
+                                    if (item.category != "General")
+                                      GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedCategory = item.category;
+                                            _selectedSubCategory = null;
+                                            _searchController.clear();
+                                            _searchQuery = "";
+                                          });
+                                          _loadInitialData();
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text("Filtering: ${item.category}"), 
+                                              duration: const Duration(seconds: 1),
+                                              behavior: SnackBarBehavior.floating,
+                                            ),
+                                          );
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.purple.withOpacity(0.12), 
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: Colors.purple.withOpacity(0.25)),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.category, size: 12, color: Colors.purple),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                item.category, 
+                                                style: const TextStyle(fontSize: 11, color: Colors.purple, fontWeight: FontWeight.w600)
+                                              ),
+                                              const SizedBox(width: 4),
+                                              const Icon(Icons.filter_list, size: 10, color: Colors.purple),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    
+                                    // CLICKABLE SUBCATEGORY CHIP
+                                    if (item.subCategory != "N/A")
+                                      GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedSubCategory = item.subCategory;
+                                            _searchController.clear();
+                                            _searchQuery = "";
+                                          });
+                                          _loadInitialData();
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text("Filtering: ${item.subCategory}"), 
+                                              duration: const Duration(seconds: 1),
+                                              behavior: SnackBarBehavior.floating,
+                                            ),
+                                          );
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.indigo.withOpacity(0.12), 
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: Colors.indigo.withOpacity(0.25)),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.account_tree, size: 12, color: Colors.indigo),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                item.subCategory, 
+                                                style: const TextStyle(fontSize: 11, color: Colors.indigo, fontWeight: FontWeight.w600)
+                                              ),
+                                              const SizedBox(width: 4),
+                                              const Icon(Icons.filter_list, size: 10, color: Colors.indigo),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    
+                                    // Size Tag (Not Clickable)
+                                    if (item.size != "N/A")
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange.withOpacity(0.12), 
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.straighten, size: 12, color: Colors.orange),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              item.size, 
+                                              style: const TextStyle(fontSize: 11, color: Colors.orange, fontWeight: FontWeight.w600)
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    
+                                    // Weight Tag (Not Clickable)
+                                    if (item.weight != "N/A")
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.teal.withOpacity(0.12), 
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.scale, size: 12, color: Colors.teal),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              item.weight, 
+                                              style: const TextStyle(fontSize: 11, color: Colors.teal, fontWeight: FontWeight.w600)
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
                                 ),
-                              if (item.weight != "N/A")
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(color: Colors.teal.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                                  child: Text("Wt: ${item.weight}", style: const TextStyle(fontSize: 10, color: Colors.teal, fontWeight: FontWeight.bold)),
-                                ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      trailing: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: item.stock < item.lowStockThreshold ? AppColors.error.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          "${item.stock}",
-                          style: AppTextStyles.label.copyWith(color: item.stock < item.lowStockThreshold ? AppColors.error : AppColors.success, fontWeight: FontWeight.bold),
+                              ),
+                          ],
                         ),
                       ),
                     ),
