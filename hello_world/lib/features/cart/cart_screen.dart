@@ -45,51 +45,61 @@ class _CartScreenState extends State<CartScreen> {
       context: context,
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        insetPadding: const EdgeInsets.all(10), // Minimal padding for max view
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
+            // Zoomable Image
+            InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: Colors.white,
+                ),
+                padding: const EdgeInsets.all(4), // White border effect
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.file(
+                    File(imagePath),
+                    fit: BoxFit.contain,
                   ),
-                ],
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: Image.file(
-                File(imagePath),
-                fit: BoxFit.contain,
+                ),
               ),
             ),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
-                borderRadius: BorderRadius.circular(30),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                   const Icon(Icons.inventory_2, size: 18, color: AppColors.accent),
-                   const SizedBox(width: 8),
-                   Text(
-                    productName,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                ],
+            
+            // Name Label (Bottom)
+            Positioned(
+              bottom: 20,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  productName,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
-            const SizedBox(height: 20),
-            IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.cancel, color: Colors.white, size: 40),
+
+            // Close Button (Top Right)
+            Positioned(
+              top: 0,
+              right: 0,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 24),
+                ),
+              ),
             ),
           ],
         ),

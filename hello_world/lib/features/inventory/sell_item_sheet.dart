@@ -136,31 +136,75 @@ class _SellItemSheetState extends State<SellItemSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
               // Product Image / Icon
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: widget.item.imagePath == null 
-                      ? AppColors.primary.withOpacity(0.1)
-                      : null,
-                  borderRadius: BorderRadius.circular(12),
-                  border: widget.item.imagePath != null 
-                      ? Border.all(color: Colors.grey[300]!, width: 1)
-                      : null,
-                  image: widget.item.imagePath != null && File(widget.item.imagePath!).existsSync()
-                      ? DecorationImage(
-                          image: FileImage(File(widget.item.imagePath!)),
-                          fit: BoxFit.cover,
+              GestureDetector(
+                onTap: () {
+                   if (widget.item.imagePath != null && File(widget.item.imagePath!).existsSync()) {
+                     showDialog(
+                       context: context,
+                       builder: (context) => Dialog(
+                         backgroundColor: Colors.transparent,
+                         insetPadding: const EdgeInsets.all(10),
+                         child: Stack(
+                           alignment: Alignment.center,
+                           children: [
+                             InteractiveViewer(
+                               minScale: 0.5,
+                               maxScale: 4.0,
+                               child: ClipRRect(
+                                 borderRadius: BorderRadius.circular(16),
+                                 child: Image.file(
+                                   File(widget.item.imagePath!),
+                                   fit: BoxFit.contain,
+                                 ),
+                               ),
+                             ),
+                             Positioned(
+                               top: 0,
+                               right: 0,
+                               child: GestureDetector(
+                                 onTap: () => Navigator.pop(context),
+                                 child: Container(
+                                   padding: const EdgeInsets.all(8),
+                                   decoration: const BoxDecoration(
+                                     color: Colors.black54,
+                                     shape: BoxShape.circle,
+                                   ),
+                                   child: const Icon(Icons.close, color: Colors.white, size: 24),
+                                 ),
+                               ),
+                             ),
+                           ],
+                         ),
+                       ),
+                     );
+                   }
+                },
+                child: Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: widget.item.imagePath == null 
+                        ? AppColors.primary.withOpacity(0.1)
+                        : null,
+                    borderRadius: BorderRadius.circular(12),
+                    border: widget.item.imagePath != null 
+                        ? Border.all(color: Colors.grey[300]!, width: 1)
+                        : null,
+                    image: widget.item.imagePath != null && File(widget.item.imagePath!).existsSync()
+                        ? DecorationImage(
+                            image: FileImage(File(widget.item.imagePath!)),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                  ),
+                  child: widget.item.imagePath == null || !File(widget.item.imagePath!).existsSync()
+                      ? const Icon(
+                          Icons.shopping_cart_checkout,
+                          color: AppColors.primary,
+                          size: 28,
                         )
                       : null,
                 ),
-                child: widget.item.imagePath == null || !File(widget.item.imagePath!).existsSync()
-                    ? const Icon(
-                        Icons.shopping_cart_checkout,
-                        color: AppColors.primary,
-                        size: 28,
-                      )
-                    : null,
               ),
               const SizedBox(width: 12),
               Expanded(

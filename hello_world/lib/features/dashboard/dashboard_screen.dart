@@ -29,6 +29,47 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   String _filter = "Weekly";
 
+  void _showImagePreview(String imagePath, String title) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(10),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.file(
+                  File(imagePath),
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+            Positioned(
+              top: 0,
+              right: 0,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 24),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final inventoryProvider = context.watch<InventoryProvider>();
@@ -46,30 +87,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
         titleSpacing: 24,
         title: Row(
           children: [
-            ClipOval(
-              child: settingsProvider.logoPath != null && File(settingsProvider.logoPath!).existsSync()
-                  ? Image.file(
-                      File(settingsProvider.logoPath!),
-                      height: 40,
-                      width: 40,
-                      fit: BoxFit.cover,
-                      key: ValueKey(settingsProvider.logoPath),
-                    )
-                  : Image.asset(
-                      'assets/logo.png',
-                      height: 40,
-                      width: 40,
-                      fit: BoxFit.cover,
-                      errorBuilder: (c, o, s) => Container(
+            GestureDetector(
+              onTap: settingsProvider.logoPath != null && File(settingsProvider.logoPath!).existsSync()
+                  ? () => _showImagePreview(settingsProvider.logoPath!, "Shop Logo")
+                  : null,
+              child: ClipOval(
+                child: settingsProvider.logoPath != null && File(settingsProvider.logoPath!).existsSync()
+                    ? Image.file(
+                        File(settingsProvider.logoPath!),
                         height: 40,
                         width: 40,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
-                          shape: BoxShape.circle,
+                        fit: BoxFit.cover,
+                        key: ValueKey(settingsProvider.logoPath),
+                      )
+                    : Image.asset(
+                        'assets/logo.png',
+                        height: 40,
+                        width: 40,
+                        fit: BoxFit.cover,
+                        errorBuilder: (c, o, s) => Container(
+                          height: 40,
+                          width: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.storefront, color: AppColors.primary, size: 24),
                         ),
-                        child: const Icon(Icons.storefront, color: AppColors.primary, size: 24),
                       ),
-                    ),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(

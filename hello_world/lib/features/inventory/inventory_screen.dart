@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:rsellx/providers/inventory_provider.dart';
 import 'package:rsellx/providers/settings_provider.dart';
 import '../../shared/widgets/full_scanner_screen.dart';
+import '../../shared/widgets/text_scanner_screen.dart';
 import '../../data/models/inventory_model.dart';
 import '../../core/services/reporting_service.dart';
 import 'add_item_sheet.dart';
@@ -183,6 +185,36 @@ class _InventoryScreenState extends State<InventoryScreen> {
         content: Text("🔍 Searching for: $barcode"),
         duration: const Duration(seconds: 2),
         backgroundColor: AppColors.accent,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  // === 2a. TEXT / HANDWRITING SEARCH ===
+  Future<void> _scanTextForSearch() async {
+    final String? scannedText = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const TextScannerScreen(),
+      ),
+    );
+
+    if (scannedText == null || scannedText.isEmpty) return;
+    
+    // Clean up newlines for search query
+    String foundText = scannedText.replaceAll('\n', ' ');
+    
+    setState(() {
+      _searchQuery = foundText;
+      _searchController.text = foundText;
+    });
+    
+    _loadInitialData(); // Trigger search
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Found: $foundText"),
+        backgroundColor: AppColors.success,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -652,60 +684,67 @@ class _InventoryScreenState extends State<InventoryScreen> {
 }
 
 
-  // === 5. IMAGE PREVIEW ===
+  // === 5. IMAGE PREVIEW (WITH ZOOM) ===
   void _showImagePreview(String imagePath, String productName) {
     showDialog(
       context: context,
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        insetPadding: const EdgeInsets.all(10), // Minimal padding for max view
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            // Image Container
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
+            // Zoomable Image
+            InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: Colors.white,
+                ),
+                padding: const EdgeInsets.all(4), // White border effect
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.file(
+                    File(imagePath),
+                    fit: BoxFit.contain,
                   ),
-                ],
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: Image.file(
-                File(imagePath),
-                fit: BoxFit.contain,
+                ),
               ),
             ),
-            const SizedBox(height: 20),
-            // Name Chip
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
-                borderRadius: BorderRadius.circular(30),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.inventory_2, size: 18, color: AppColors.accent),
-                  const SizedBox(width: 8),
-                  Text(
-                    productName,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                ],
+            
+            // Name Label (Bottom)
+            Positioned(
+              bottom: 20,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  productName,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
-            const SizedBox(height: 20),
-            // Close Button
-            IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.cancel, color: Colors.white, size: 40),
+
+            // Close Button (Top Right)
+            Positioned(
+              top: 0,
+              right: 0,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 24),
+                ),
+              ),
             ),
           ],
         ),
@@ -816,7 +855,18 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
+                    // TEXT SCANNER
+                    GestureDetector(
+                      onTap: _scanTextForSearch,
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(color: Colors.indigo, borderRadius: BorderRadius.circular(16)),
+                        child: const Icon(Icons.document_scanner, color: Colors.white),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // QR SCANNER
                     GestureDetector(
                       onTap: _scanForSearch,
                       child: Container(

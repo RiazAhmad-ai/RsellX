@@ -2,10 +2,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:rsellx/providers/inventory_provider.dart';
 import '../../data/models/inventory_model.dart';
 import '../../shared/widgets/full_scanner_screen.dart';
+import '../../shared/widgets/text_scanner_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 
@@ -123,7 +125,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
   Future<String> _saveImageToAppDir(String tempPath) async {
     final appDir = await getApplicationDocumentsDirectory();
     final fileName = 'product_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    final savedImage = await File(tempPath).copy('${appDir.path}/$fileName');
+    final savedImage = await File(tempPath).copy('${appDir.path}/\$fileName');
     return savedImage.path;
   }
 
@@ -165,6 +167,36 @@ class _AddItemSheetState extends State<AddItemSheet> {
       setState(() {
         _barcodeController.text = barcode;
       });
+    }
+  }
+
+  // === TEXT / DOCUMENT SCANNER ===
+  Future<void> _scanTextForBarcode() async {
+    // Open new camera-based scanner
+    final String? scannedText = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const TextScannerScreen(),
+      ),
+    );
+
+    if (scannedText == null || scannedText.isEmpty) return;
+    
+    // Basic cleanup
+    String foundText = scannedText.replaceAll('\n', ' ');
+    
+    setState(() {
+      _barcodeController.text = foundText;
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Scanned: \$foundText"),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -256,7 +288,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
                   onTap: () {
                     final timestamp = DateTime.now().millisecondsSinceEpoch;
                     final hex = timestamp.toRadixString(16).toUpperCase();
-                    final code = "SKU-${hex.substring(hex.length - 8)}";
+                    final code = "SKU-\${hex.substring(hex.length - 8)}";
                     Navigator.pop(context);
                     setState(() {
                       _barcodeController.text = code;
@@ -382,7 +414,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
                 return;
               }
               final random = DateTime.now().millisecondsSinceEpoch % 1000000;
-              final code = "$prefix-${random.toString().padLeft(6, '0')}";
+              final code = "\$prefix-\${random.toString().padLeft(6, '0')}";
               Navigator.pop(context);
               setState(() {
                 _barcodeController.text = code;
@@ -403,7 +435,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
           children: [
             const Icon(Icons.check_circle, color: Colors.white),
             const SizedBox(width: 12),
-            Text("Barcode Generated: $code"),
+            Text("Barcode Generated: \$code"),
           ],
         ),
         backgroundColor: AppColors.success,
@@ -460,7 +492,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: \$e"), backgroundColor: Colors.red));
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -474,310 +506,362 @@ class _AddItemSheetState extends State<AddItemSheet> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Padding(
-          padding: EdgeInsets.only(
-            bottom: bottomPadding,
-            left: 24,
-            right: 24,
-            top: 16, // Reduced top padding for handle
-          ),
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(10),
+        padding: EdgeInsets.only(
+          bottom: bottomPadding,
+          left: 24,
+          right: 24,
+          top: 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // === SWIPEABLE HEADER SECTION (Handle + Title + Image) ===
+            GestureDetector(
+              onVerticalDragEnd: (details) {
+                 if (details.primaryVelocity! > 0) {
+                  Navigator.pop(context);
+                }
+              },
+              behavior: HitTestBehavior.translucent,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                   // Handle
+                   Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Center(
+                      child: Container(
+                        width: 50,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                
-                // Header Row: Title + Image Picker
-                Row(
+
+                  // Header Row: Title + Image Picker (Now Fixed at Top)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 20),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Title
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("ADD NEW STOCK", style: AppTextStyles.h2),
+                              const SizedBox(height: 4),
+                              Text("Fill in product details", style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                        // Image Picker
+                        GestureDetector(
+                          onTap: _pickImage,
+                          child: Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: _selectedImage != null ? AppColors.success : Colors.grey[300]!,
+                                width: _selectedImage != null ? 2 : 1,
+                              ),
+                              image: _selectedImage != null
+                                  ? DecorationImage(
+                                      image: FileImage(_selectedImage!),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
+                            ),
+                            child: _selectedImage == null
+                                ? Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.add_a_photo, color: Colors.grey[400], size: 28),
+                                      const SizedBox(height: 4),
+                                      Text("Add Photo", style: TextStyle(color: Colors.grey[500], fontSize: 10)),
+                                    ],
+                                  )
+                                : Stack(
+                                    children: [
+                                      Positioned(
+                                        top: 4,
+                                        right: 4,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.success,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: const Icon(Icons.check, color: Colors.white, size: 12),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // === SCROLLABLE CONTENT ===
+            Flexible(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Title
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("ADD NEW STOCK", style: AppTextStyles.h2),
-                          const SizedBox(height: 4),
-                          Text("Fill in product details", style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-                        ],
-                      ),
-                    ),
-                    // Image Picker Button / Preview
-                    GestureDetector(
-                      onTap: _pickImage,
-                      child: Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: _selectedImage != null ? AppColors.success : Colors.grey[300]!,
-                            width: _selectedImage != null ? 2 : 1,
-                          ),
-                          image: _selectedImage != null
-                              ? DecorationImage(
-                                  image: FileImage(_selectedImage!),
-                                  fit: BoxFit.cover,
-                                )
-                              : null,
-                        ),
-                        child: _selectedImage == null
-                            ? Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.add_a_photo, color: Colors.grey[400], size: 28),
-                                  const SizedBox(height: 4),
-                                  Text("Add Photo", style: TextStyle(color: Colors.grey[500], fontSize: 10)),
-                                ],
-                              )
-                            : Stack(
-                                children: [
-                                  Positioned(
-                                    top: 4,
-                                    right: 4,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.success,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: const Icon(Icons.check, color: Colors.white, size: 12),
-                                    ),
-                                  ),
-                                ],
+                    // Header Moved Up ^
+                    
+                    // === BARCODE SECTION (TOP PRIORITY) ===
+                    
+                    // 1. Scan/Generate Buttons (Buttons First)
+                    Row(
+                      children: [
+                        // Generate Barcode Button
+                        Expanded(
+                          child: Tooltip(
+                            message: "Auto Generate",
+                            child: GestureDetector(
+                              onTap: _generateBarcode,
+                              child: Container(
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: AppColors.success,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(Icons.auto_awesome, color: Colors.white),
                               ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // Barcode Field with Scan & Generate Buttons
-                const Text("Barcode / Sticker Number", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _barcodeController,
-                        decoration: InputDecoration(
-                          hintText: "Enter or Generate Code",
-                          prefixIcon: const Icon(Icons.qr_code),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Generate Barcode Button
-                    Tooltip(
-                      message: "Auto Generate",
-                      child: GestureDetector(
-                        onTap: _generateBarcode,
-                        child: Container(
-                          height: 56,
-                          width: 56,
-                          decoration: BoxDecoration(
-                            color: AppColors.success,
-                            borderRadius: BorderRadius.circular(16),
+                            ),
                           ),
-                          child: const Icon(Icons.auto_awesome, color: Colors.white),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Scan Barcode Button
-                    Tooltip(
-                      message: "Scan Barcode",
-                      child: GestureDetector(
-                        onTap: _scanBarcode,
-                        child: Container(
-                          height: 56,
-                          width: 56,
-                          decoration: BoxDecoration(color: AppColors.accent, borderRadius: BorderRadius.circular(16)),
-                          child: const Icon(Icons.qr_code_scanner, color: Colors.white),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                const Text("Item Details", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _nameController,
-                  decoration: InputDecoration(
-                    hintText: "Item Name",
-                    prefixIcon: const Icon(Icons.inventory_2_outlined),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                
-                // Category and Sub-Category
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _categoryController,
-                        decoration: InputDecoration(
-                          hintText: "Category",
-                          prefixIcon: const Icon(Icons.category),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: _subCategoryController,
-                        decoration: InputDecoration(
-                          hintText: "Sub-Category",
-                          prefixIcon: const Icon(Icons.account_tree_outlined),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 12),
-                
-                // Size and Weight
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _sizeController,
-                        decoration: InputDecoration(
-                          hintText: "Size",
-                          prefixIcon: const Icon(Icons.straighten),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: _weightController,
-                        decoration: InputDecoration(
-                          hintText: "Weight (e.g. 500g)",
-                          prefixIcon: const Icon(Icons.scale),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 12),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _priceController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          hintText: "Cost Price",
-                          prefixIcon: const Icon(Icons.attach_money),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: _stockController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          hintText: "Stock Qty",
-                          prefixIcon: const Icon(Icons.numbers),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _thresholdController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: "Low Stock Alert Level",
-                    prefixIcon: const Icon(Icons.warning_amber_rounded),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                TextField(
-                  controller: _descController,
-                  maxLines: 2,
-                  decoration: InputDecoration(
-                    hintText: "Description (Optional)",
-                    prefixIcon: const Icon(Icons.description_outlined),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isSaving ? null : _saveItem,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.secondary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      elevation: 0,
-                    ),
-                    child: _isSaving
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                            "SAVE ITEM",
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        const SizedBox(width: 8),
+                        // Scan Text Button
+                        Expanded(
+                          child: Tooltip(
+                            message: "Scan Text / Handwriting",
+                            child: GestureDetector(
+                              onTap: _scanTextForBarcode,
+                              child: Container(
+                                height: 50,
+                                decoration: BoxDecoration(color: Colors.indigo, borderRadius: BorderRadius.circular(12)),
+                                child: const Icon(Icons.document_scanner, color: Colors.white),
+                              ),
+                            ),
                           ),
-                  ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Scan Barcode Button
+                        Expanded(
+                          child: Tooltip(
+                            message: "Scan Barcode",
+                            child: GestureDetector(
+                              onTap: _scanBarcode,
+                              child: Container(
+                                height: 50,
+                                decoration: BoxDecoration(color: AppColors.accent, borderRadius: BorderRadius.circular(12)),
+                                child: const Icon(Icons.qr_code_scanner, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // 2. Label (Above Box)
+                    const Text("Barcode / Sticker Number", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                    const SizedBox(height: 8),
+                    
+                    // 3. Barcode Input Field (BELOW the buttons & label)
+                    TextField(
+                      controller: _barcodeController,
+                      maxLines: null,
+                      keyboardType: TextInputType.multiline,
+                      decoration: InputDecoration(
+                        hintText: "Enter or Generate Code",
+                        prefixIcon: const Icon(Icons.qr_code),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // === ITEM DETAILS ===
+                    const Text("Item Details", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _nameController,
+                      decoration: InputDecoration(
+                        hintText: "Item Name",
+                        prefixIcon: const Icon(Icons.inventory_2_outlined),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    // Category and Sub-Category
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _categoryController,
+                            decoration: InputDecoration(
+                              hintText: "Category",
+                              prefixIcon: const Icon(Icons.category),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                              filled: true,
+                              fillColor: Colors.grey[100],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: _subCategoryController,
+                            decoration: InputDecoration(
+                              hintText: "Sub-Category",
+                              prefixIcon: const Icon(Icons.account_tree_outlined),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                              filled: true,
+                              fillColor: Colors.grey[100],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+                    
+                    // Size and Weight
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _sizeController,
+                            decoration: InputDecoration(
+                              hintText: "Size",
+                              prefixIcon: const Icon(Icons.straighten),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                              filled: true,
+                              fillColor: Colors.grey[100],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: _weightController,
+                            decoration: InputDecoration(
+                              hintText: "Weight (e.g. 500g)",
+                              prefixIcon: const Icon(Icons.scale),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                              filled: true,
+                              fillColor: Colors.grey[100],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _priceController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              hintText: "Cost Price",
+                              prefixIcon: const Icon(Icons.attach_money),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                              filled: true,
+                              fillColor: Colors.grey[100],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: _stockController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              hintText: "Stock Qty",
+                              prefixIcon: const Icon(Icons.numbers),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                              filled: true,
+                              fillColor: Colors.grey[100],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _thresholdController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: "Low Stock Alert Level",
+                        prefixIcon: const Icon(Icons.warning_amber_rounded),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    TextField(
+                      controller: _descController,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        hintText: "Description (Optional)",
+                        prefixIcon: const Icon(Icons.description_outlined),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: _isSaving ? null : _saveItem,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.secondary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          elevation: 0,
+                        ),
+                        child: _isSaving
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text("SAVE ITEM", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(height: 48), // Bottom padding for content
+                  ],
                 ),
-                const SizedBox(height: 24),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
+      ),
     );
   }
 }

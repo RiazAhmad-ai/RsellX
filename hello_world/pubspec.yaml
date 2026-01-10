@@ -18,7 +18,9 @@ dependencies:
   intl: ^0.19.0
 
   # --- NEW: BARCODE SCANNER ---
+  camera: ^0.10.5
   mobile_scanner: ^5.2.3
+  google_mlkit_text_recognition: ^0.13.0
   
   # --- Offline Database (Fast Storage) ---
   hive: ^2.2.3

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../inventory/inventory_screen.dart';
@@ -7,6 +8,7 @@ import '../expenses/expense_screen.dart';
 import '../../data/models/inventory_model.dart';
 import '../inventory/sell_item_sheet.dart';
 import '../../shared/widgets/full_scanner_screen.dart';
+import '../../shared/widgets/text_scanner_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../cart/cart_screen.dart';
@@ -215,58 +217,253 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+  // === OCR SCANNER FOR SELLING (SWIPE UP) ===
+  void _openOcrScanner() async {
+    final String? text = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const TextScannerScreen(),
+      ),
+    );
+
+    if (text != null && text.isNotEmpty) {
+      final cleanText = text.replaceAll('\n', ' ').trim();
+      ScaffoldMessenger.of(context).showSnackBar(
+         SnackBar(content: Text("Searching for: $cleanText..."), duration: const Duration(seconds: 1)),
+      );
+      
+      // Find item by Name (OCR usually returns text/name) or Code
+      // Since OCR is unreliable for exact strings, we might want to do a "contains" search in provider
+      // But currently findItemByBarcode is an exact match.
+      // Let's try to match name first loosely if possible, otherwise rely on exact barcode match if it scanned a code as text.
+      // For now, let's treat it as a potential Name or Barcode search.
+      
+      final inventory = context.read<InventoryProvider>();
+      InventoryItem? match = inventory.findItemByBarcode(cleanText); // Exact match check first
+
+      // If no barcode match, try searching by name (first match)
+      if (match == null) {
+          try {
+             match = inventory.inventory.firstWhere((item) => item.name.toLowerCase().contains(cleanText.toLowerCase()));
+          } catch (e) {
+             match = null;
+          }
+      }
+
+      if (match != null) {
+          if (!mounted) return;
+          final result = await showModalBottomSheet<String>(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.white,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+            ),
+            builder: (context) => SellItemSheet(item: match!),
+          );
+
+          if (result == "VIEW_CART") {
+            if (!mounted) return;
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const CartScreen()),
+            );
+          }
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("❌ No item found matching: $cleanText"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_selectedIndex],
+      body: PopScope(
+        canPop: false,
+        onPopInvoked: (didPop) async {
+          if (didPop) return;
+          final shouldExit = await showDialog<bool>(
+            context: context,
+            builder: (context) => Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.red[50],
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.power_settings_new_rounded, color: Colors.redAccent, size: 40),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      "Exit App?",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      "Are you sure you want to exit the application?",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                            child: Text("Cancel", style: TextStyle(color: Colors.grey[700], fontSize: 16)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            style: ElevatedButton.styleFrom(
+                              elevation: 2,
+                              backgroundColor: Colors.redAccent,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                            child: const Text("Exit", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+
+          if (shouldExit ?? false) {
+             SystemNavigator.pop();
+          }
+        },
+        child: _screens[_selectedIndex],
+      ),
 
       // Floating Barcode Scanner Button
       floatingActionButton: Builder(
         builder: (context) {
           final cartCount = context.watch<SalesProvider>().cart.length;
           return SizedBox(
-            height: 70,
-            width: 70,
+            height: 80, // Increased size for better visibility
+            width: 80,
             child: Tooltip(
-              message: "Tap to Scan, Hold to Type Code",
+              message: "Tap: Scan | Swipe Up: OCR | Swipe Down: Manual",
               child: GestureDetector(
-                onLongPress: () {
-                   ScaffoldMessenger.of(context).showSnackBar(
-                     const SnackBar(
-                       content: Text("Manual Mode Activated ⌨️"), 
-                       duration: Duration(milliseconds: 600),
-                       backgroundColor: Colors.redAccent,
-                     )
-                   );
-                   _showManualSellDialog();
+                // Swipe Detection (Up & Down)
+                onVerticalDragEnd: (details) {
+                  if (details.primaryVelocity! < 0) { 
+                    // Swipe UP -> OCR
+                    _openOcrScanner();
+                  } else if (details.primaryVelocity! > 0) {
+                    // Swipe DOWN -> Manual (Keyboard)
+                    ScaffoldMessenger.of(context).showSnackBar(
+                       const SnackBar(
+                         content: Text("Manual Mode Activated ⌨️"), 
+                         duration: Duration(milliseconds: 600),
+                         backgroundColor: Colors.redAccent,
+                         behavior: SnackBarBehavior.floating,
+                       )
+                     );
+                    _showManualSellDialog();
+                  }
                 },
-                child: FloatingActionButton(
-                  onPressed: _openBarcodeScanner, // Standard Scan
-                  backgroundColor: AppColors.accent,
-                  shape: const CircleBorder(),
-                  elevation: 4,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      const Icon(Icons.qr_code_scanner, size: 30, color: Colors.white),
-                      if (cartCount > 0)
-                        Positioned(
-                          top: -10,
-                          right: -10,
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Text(
-                              "$cartCount",
-                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                            ),
+                onTap: _openBarcodeScanner,
+                child: Stack(
+                  alignment: Alignment.topRight,
+                  clipBehavior: Clip.none,
+                  children: [
+                    // Main Circular Button
+                    Container(
+                      height: 72, 
+                      width: 72,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [AppColors.accent, AppColors.accent.withOpacity(0.8)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.accent.withOpacity(0.4),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.keyboard_arrow_up, color: Colors.white.withOpacity(0.7), size: 18),
+                          const SizedBox(height: 2),
+                          const Icon(Icons.qr_code_scanner, size: 26, color: Colors.white),
+                          const SizedBox(height: 2),
+                          Icon(Icons.keyboard_arrow_down, color: Colors.white.withOpacity(0.7), size: 18),
+                        ],
+                      ),
+                    ),
+
+                    // Cart Badge (Overlay)
+                    if (cartCount > 0)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4, offset: const Offset(0, 2))
+                            ]
+                          ),
+                          child: Text(
+                            "$cartCount",
+                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900),
                           ),
                         ),
-                    ],
-                  ),
+                      ),
+                  ],
                 ),
               ),
             ),
