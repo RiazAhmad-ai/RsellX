@@ -42,16 +42,22 @@ class _InventoryScreenState extends State<InventoryScreen> {
   bool _isLoadingMore = false;
   List<InventoryItem> _displayedItems = [];
   int _lastKnownInventoryCount = 0;
+  
+  // Store provider reference to avoid context.read in dispose
+  InventoryProvider? _inventoryProvider;
 
   @override
   void initState() {
     super.initState();
-    _loadInitialData();
     _scrollController.addListener(_onScroll);
     
     // Listen to inventory changes to keep the screen updated in real-time
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<InventoryProvider>().addListener(_onInventoryChanged);
+      if (mounted) {
+        _inventoryProvider = context.read<InventoryProvider>();
+        _inventoryProvider?.addListener(_onInventoryChanged);
+        _loadInitialData();
+      }
     });
   }
 
@@ -64,7 +70,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   @override
   void dispose() {
-    context.read<InventoryProvider>().removeListener(_onInventoryChanged);
+    // Use stored reference instead of context.read to prevent crash after unmount
+    _inventoryProvider?.removeListener(_onInventoryChanged);
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -77,10 +84,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
     }
   }
 
-  void _loadInitialData() {
-    final inventoryProvider = context.read<InventoryProvider>();
-    final allItems = inventoryProvider.inventory.where((item) {
-       // Filter by Category
+  /// Helper method to get filtered and sorted items (DRY principle)
+  List<InventoryItem> _getFilteredItems() {
+    final inventoryProvider = _inventoryProvider ?? context.read<InventoryProvider>();
+    final query = _searchQuery.toLowerCase();
+    
+    final filteredItems = inventoryProvider.inventory.where((item) {
+      // Filter by Category
       if (_selectedCategory != null && item.category != _selectedCategory) {
         return false;
       }
@@ -89,14 +99,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
         return false;
       }
       // Filter by Search (name, barcode, category, and subcategory)
-      final query = _searchQuery.toLowerCase();
       return item.name.toLowerCase().contains(query) ||
           item.barcode.toLowerCase().contains(query) ||
           item.category.toLowerCase().contains(query) ||
           item.subCategory.toLowerCase().contains(query);
     }).toList();
 
-    allItems.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    // Sort alphabetically by name
+    filteredItems.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    
+    return filteredItems;
+  }
+
+  void _loadInitialData() {
+    final allItems = _getFilteredItems();
 
     if (mounted) {
       setState(() {
@@ -109,24 +125,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   void _loadMoreData() {
     if (_isLoadingMore) return;
 
-    final inventoryProvider = context.read<InventoryProvider>();
-    final allItems = inventoryProvider.inventory.where((item) {
-      if (_selectedCategory != null && item.category != _selectedCategory) {
-        return false;
-      }
-      // Filter by SubCategory
-      if (_selectedSubCategory != null && item.subCategory != _selectedSubCategory) {
-        return false;
-      }
-      // Filter by Search (name, barcode, category, and subcategory)
-      final query = _searchQuery.toLowerCase();
-      return item.name.toLowerCase().contains(query) ||
-          item.barcode.toLowerCase().contains(query) ||
-          item.category.toLowerCase().contains(query) ||
-          item.subCategory.toLowerCase().contains(query);
-    }).toList();
-
-    allItems.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final allItems = _getFilteredItems();
 
     if (_displayedItems.length >= allItems.length) return;
 

@@ -59,6 +59,7 @@ class _SellItemSheetState extends State<SellItemSheet> {
         qty: _sellQty,
         profit: (salePrice - widget.item.price) * _sellQty,
         date: DateTime.now(),
+        status: "Cart", // Cart status until checkout
         category: widget.item.category,
         subCategory: widget.item.subCategory,
         size: widget.item.size,
@@ -95,6 +96,7 @@ class _SellItemSheetState extends State<SellItemSheet> {
         qty: _sellQty,
         profit: (salePrice - widget.item.price) * _sellQty,
         date: DateTime.now(),
+        status: "Cart", // Cart status until checkout
         category: widget.item.category,
         subCategory: widget.item.subCategory,
         size: widget.item.size,

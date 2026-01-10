@@ -66,13 +66,15 @@ class SalesProvider extends ChangeNotifier {
   }
 
   void updateHistoryItem(SaleRecord oldItem, SaleRecord newData) {
+    // IMPORTANT: Calculate qtyDiff BEFORE updating oldItem.qty to get correct stock adjustment
+    int originalQty = oldItem.qty;
+    int qtyDiff = originalQty - newData.qty;
+    
     double newProfit = (newData.price - oldItem.actualPrice) * newData.qty;
     oldItem.name = newData.name;
     oldItem.price = newData.price;
     oldItem.qty = newData.qty;
     oldItem.profit = newProfit;
-
-    int qtyDiff = oldItem.qty - newData.qty;
     if (qtyDiff != 0 && oldItem.itemId.isNotEmpty) {
       final invItem = _inventoryBox.get(oldItem.itemId);
       if (invItem != null) {
