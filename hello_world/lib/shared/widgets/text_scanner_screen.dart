@@ -58,41 +58,17 @@ class _TextScannerScreenState extends State<TextScannerScreen> {
 
     try {
       final XFile image = await _controller!.takePicture();
-      final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
+      final textRecognizer = TextRecognizer(); // Auto-detect all scripts including handwritten
       final inputImage = InputImage.fromFilePath(image.path);
       
       final RecognizedText recognizedText = await textRecognizer.processImage(inputImage);
       
-      // Filter logic: Only keep text that is "centrally" located in the image
-      // For simplicity, we can assume the user centers the text.
-      // But we can filter by bounding box if we want to be strict.
-      // For now, let's return the most prominent central block or just all text 
-      // since the user framed it. 
-      // To strictly match "only in this box", we'd filter blocks.
-      
-      // Let's implement a basic filter: 
-      // The image is usually high res. The box is in the center.
-      // We will accept any block that intersects the center 50% of the image.
-      
       String resultText = "";
-      
-      // Usually mobile cameras rotate images. With fromFilePath, ML Kit handles rotation metadata.
-      // We'll iterate blocks and pick the one closest to center or just all of them for now
-      // and let the user refine. But user asked for "specific space".
-      // Let's filter blocks that are centrally located.
-      
-      // We don't know the exact image size vs screen size mapping easily here without complexity.
-      // So we will return the text "as seen". Since the user framed it, they likely framed only the text they want.
-      // To be "scanner ki tarah", the framing is the key.
-      
-      // However, if we want to be smart, we can pick the block with the largest area in the center.
-       
       double maxArea = 0;
       String bestBlockText = "";
 
       // Simple heuristic: largest text block is usually the barcode/label
       for (TextBlock block in recognizedText.blocks) {
-        // Calculate area
         double area = block.boundingBox.width * block.boundingBox.height;
         if (area > maxArea) {
           maxArea = area;
@@ -100,7 +76,6 @@ class _TextScannerScreenState extends State<TextScannerScreen> {
         }
       }
       
-      // If we found something, use it. Otherwise use all text or first line.
       if (bestBlockText.isNotEmpty) {
         resultText = bestBlockText;
       } else {

@@ -41,6 +41,7 @@ dependencies:
   audioplayers: ^5.2.1
   barcode_widget: ^2.0.4
   url_launcher: ^6.2.1
+  image: ^4.1.7  # For OCR image preprocessing
 
 dev_dependencies:
   flutter_test:
