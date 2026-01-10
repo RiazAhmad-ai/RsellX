@@ -48,6 +48,7 @@ class _FullScannerScreenState extends State<FullScannerScreen> {
                 _isPopped = true;
                 
                 // 1. Play Custom High-Pitch Beep
+                _player.seek(Duration.zero);
                 _player.resume(); // resume/play from start
                 
                 _controller.stop();

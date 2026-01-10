@@ -13,7 +13,16 @@ class DatabaseService {
       AppLogger.info("Initializing Database...");
       await Hive.initFlutter();
       _registerAdapters();
-      await _migrateData();
+      
+      // Open settings box first to check migration status
+      final settingsBox = await Hive.openBox('settingsBox');
+      final isMigrated = settingsBox.get('is_migrated_v3', defaultValue: false);
+      
+      if (!isMigrated) {
+        await _migrateData();
+        await settingsBox.put('is_migrated_v3', true);
+      }
+      
       await _openBoxes();
       AppLogger.info("Database Initialized Successfully.");
     } catch (e, stack) {
@@ -59,14 +68,29 @@ class DatabaseService {
           date: DateTime.tryParse(value['date']?.toString() ?? "") ?? DateTime.now(),
           status: value['status']?.toString() ?? "Sold",
           billId: value['billId']?.toString(),
+          category: value['category']?.toString() ?? "General",
+          subCategory: value['subCategory']?.toString() ?? "N/A",
+          size: value['size']?.toString() ?? "N/A",
+          weight: value['weight']?.toString() ?? "N/A",
+          imagePath: value['imagePath']?.toString(),
         );
       }
       return null;
     });
 
-    // 2. Migrate Inventory
+    // 2. Migrate Inventory (and fix broken image paths)
     await _migrateBox('inventoryBox', (value, key) {
       if (value is Map) {
+        String? imagePath = value['imagePath']?.toString();
+        
+        // Fix for the '$fileName' literal bug:
+        // If the path contains the literal text '$fileName', it's a shared buggy link.
+        // We'll keep it for now but the next time the user edits it, the UI will handle it.
+        // Or better: clear it if it's the broken literal to prevent "mass-updating" images.
+        if (imagePath != null && imagePath.contains('\$fileName')) {
+          imagePath = null; 
+        }
+
         return InventoryItem(
           id: value['id']?.toString() ?? key.toString(),
           name: value['name']?.toString() ?? "Unknown",
@@ -74,6 +98,12 @@ class DatabaseService {
           stock: (value['stock'] as num?)?.toInt() ?? 0,
           description: value['description']?.toString(),
           barcode: value['barcode']?.toString() ?? "N/A",
+          imagePath: imagePath,
+          category: value['category']?.toString() ?? "General",
+          subCategory: value['subCategory']?.toString() ?? "N/A",
+          size: value['size']?.toString() ?? "N/A",
+          weight: value['weight']?.toString() ?? "N/A",
+          lowStockThreshold: (value['lowStockThreshold'] as num?)?.toInt() ?? 5,
         );
       }
       return null;

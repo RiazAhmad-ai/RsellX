@@ -2,6 +2,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:rsellx/providers/sales_provider.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:provider/provider.dart';
 import '../../data/models/inventory_model.dart';
 import '../../data/models/sale_model.dart';
@@ -23,13 +24,23 @@ class _SellItemSheetState extends State<SellItemSheet> {
   late TextEditingController _qtyController;
   double _profit = 0.0;
   int _sellQty = 1;
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
   void initState() {
     super.initState();
     _salePriceController = TextEditingController(text: "");
     _qtyController = TextEditingController(text: "1");
+    _audioPlayer.setSource(AssetSource('scanner_beep.mp3'));
     _calculateProfit();
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    _qtyController.dispose();
+    _salePriceController.dispose();
+    super.dispose();
   }
 
   void _calculateProfit() {
@@ -68,6 +79,7 @@ class _SellItemSheetState extends State<SellItemSheet> {
       );
 
       context.read<SalesProvider>().addToCart(sale);
+      _audioPlayer.stop().then((_) => _audioPlayer.play(AssetSource('scanner_beep.mp3')));
       Navigator.pop(context, "ADD_MORE");
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -105,6 +117,7 @@ class _SellItemSheetState extends State<SellItemSheet> {
       );
 
       context.read<SalesProvider>().addToCart(sale);
+      _audioPlayer.stop().then((_) => _audioPlayer.play(AssetSource('scanner_beep.mp3')));
       Navigator.pop(context, "VIEW_CART");
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -220,14 +233,28 @@ class _SellItemSheetState extends State<SellItemSheet> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      "Stock: ${widget.item.stock}",
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: widget.item.stock < widget.item.lowStockThreshold ? Colors.red : Colors.grey[600],
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          "Stock: ${widget.item.stock}",
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: widget.item.stock < widget.item.lowStockThreshold ? Colors.red : Colors.grey[600],
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Icon(Icons.qr_code, size: 14, color: Colors.grey[500]),
+                        const SizedBox(width: 4),
+                        Text(
+                          widget.item.barcode,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     Wrap(

@@ -5,6 +5,7 @@ import 'package:rsellx/data/models/inventory_model.dart';
 import 'package:rsellx/data/models/sale_model.dart';
 import 'package:rsellx/data/models/expense_model.dart';
 import 'package:rsellx/data/models/damage_model.dart';
+import 'package:rsellx/core/constants/app_constants.dart';
 
 class SalesProvider extends ChangeNotifier {
   // === Cache ===
@@ -128,6 +129,11 @@ class SalesProvider extends ChangeNotifier {
         profit: 0.0,
         date: DateTime.now(),
         status: "Refunded",
+        category: historyItem.category,
+        subCategory: historyItem.subCategory,
+        size: historyItem.size,
+        weight: historyItem.weight,
+        imagePath: historyItem.imagePath,
       );
       _historyBox.put(refundPart.id, refundPart);
     } else {
@@ -252,6 +258,11 @@ class SalesProvider extends ChangeNotifier {
           date: now,
           status: "Sold",
           billId: billId,
+          category: item.category,
+          subCategory: item.subCategory,
+          size: item.size,
+          weight: item.weight,
+          imagePath: item.imagePath,
         );
         
         putOperations.add(_historyBox.put(historyRecord.id, historyRecord));
@@ -354,7 +365,7 @@ class SalesProvider extends ChangeNotifier {
     // Generate labels
     for (int i = 6; i >= 0; i--) {
       DateTime date = now.subtract(Duration(days: i));
-      labels.add(["M", "T", "W", "T", "F", "S", "S"][date.weekday - 1]);
+      labels.add(AppConstants.weekLabels[date.weekday - 1]);
     }
 
     double totalSales = sales.fold(0, (a, b) => a + b);
@@ -379,7 +390,7 @@ class SalesProvider extends ChangeNotifier {
     List<double> expenses = List.filled(4, 0.0);
     List<double> profit = List.filled(4, 0.0);
     List<double> damage = List.filled(4, 0.0);
-    List<String> labels = ["W1", "W2", "W3", "W4"];
+    List<String> labels = AppConstants.weekGroups;
     DateTime now = DateTime.now();
     
     // Helper to find week index (0-3) from date
@@ -438,7 +449,7 @@ class SalesProvider extends ChangeNotifier {
     List<double> expenses = List.filled(12, 0.0);
     List<double> profit = List.filled(12, 0.0);
     List<double> damage = List.filled(12, 0.0);
-    List<String> labels = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+    List<String> labels = AppConstants.yearLabels;
     int currentYear = DateTime.now().year;
 
     // SINGLE PASS with month-based indexing

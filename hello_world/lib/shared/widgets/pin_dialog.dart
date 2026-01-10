@@ -16,6 +16,8 @@ class PinDialog extends StatefulWidget {
 class _PinDialogState extends State<PinDialog> {
   final _pinController = TextEditingController();
   String _error = "";
+  int _attempts = 0;
+  static const int _maxAttempts = 5;
 
   @override
   Widget build(BuildContext context) {
@@ -63,15 +65,23 @@ class _PinDialogState extends State<PinDialog> {
                 ),
                 onChanged: (val) {
                   if (val.length == 4) {
-                     if (val == correctPin) {
-                        Navigator.pop(context);
-                        widget.onSuccess();
-                     } else {
-                        setState(() {
-                          _error = "Incorrect PIN";
-                          _pinController.clear();
-                        });
-                     }
+                    if (val == correctPin) {
+                      Navigator.pop(context);
+                      widget.onSuccess();
+                    } else {
+                      setState(() {
+                        _attempts++;
+                        if (_attempts >= _maxAttempts) {
+                          _error = "Too many failed attempts. Try again later.";
+                          Future.delayed(const Duration(seconds: 2), () {
+                            if (mounted) Navigator.pop(context);
+                          });
+                        } else {
+                          _error = "Incorrect PIN. ${_maxAttempts - _attempts} attempts left.";
+                        }
+                        _pinController.clear();
+                      });
+                    }
                   }
                 },
               ),

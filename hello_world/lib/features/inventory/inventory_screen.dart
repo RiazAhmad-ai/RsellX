@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:rsellx/providers/inventory_provider.dart';
 import 'package:rsellx/providers/settings_provider.dart';
 import '../../shared/widgets/full_scanner_screen.dart';
@@ -14,6 +15,8 @@ import 'sell_item_sheet.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import './widgets/inventory_list_item.dart';
+import './widgets/inventory_grid_item.dart';
 import '../barcode/barcode_generator_screen.dart';
 import '../../shared/widgets/cart_badge.dart';
 import '../cart/cart_screen.dart';
@@ -42,14 +45,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
   bool _isLoadingMore = false;
   List<InventoryItem> _displayedItems = [];
   int _lastKnownInventoryCount = 0;
+
+  // Cache for filtered items
+  List<InventoryItem> _cachedFilteredItems = [];
+  String _lastCacheKey = "";
   
   // Store provider reference to avoid context.read in dispose
   InventoryProvider? _inventoryProvider;
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _audioPlayer.setSource(AssetSource('scanner_beep.mp3'));
     
     // Listen to inventory changes to keep the screen updated in real-time
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -63,8 +72,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   void _onInventoryChanged() {
     if (mounted) {
-      // Re-apply filters which also re-loads initial data from the provider
-      _loadInitialData(); // Using _loadInitialData as _applyFilters is not defined and _loadInitialData performs the filtering.
+      _lastCacheKey = ""; // CRITICAL: Reset cache key to force recalculation of filtered list
+      _loadInitialData(); 
     }
   }
 
@@ -74,6 +83,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     _inventoryProvider?.removeListener(_onInventoryChanged);
     _scrollController.dispose();
     _searchController.dispose();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -89,6 +99,19 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final inventoryProvider = _inventoryProvider ?? context.read<InventoryProvider>();
     final query = _searchQuery.toLowerCase();
     
+    // Generate cache key based on search, category, subcategory and inventory state
+    // Using inventory length and a rough sum of IDs or just length + dirty flag if we had one
+    // But since _onInventoryChanged clears the cache by calling _loadInitialData, 
+    // we just need to check if filter parameters changed.
+    // Generate robust cache key. Including 'hashCode' of inventory list might be expensive, 
+    // so we rely on _onInventoryChanged to clear the cache key when items are added/deleted.
+    // However, to detect EDITS (which don't change length), we include the change count if available.
+    final currentCacheKey = "$_searchQuery|$_selectedCategory|$_selectedSubCategory|${inventoryProvider.inventory.length}";
+    
+    if (_lastCacheKey == currentCacheKey) {
+      return _cachedFilteredItems;
+    }
+
     final filteredItems = inventoryProvider.inventory.where((item) {
       // Filter by Category
       if (_selectedCategory != null && item.category != _selectedCategory) {
@@ -108,6 +131,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
     // Sort alphabetically by name
     filteredItems.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     
+    _cachedFilteredItems = filteredItems;
+    _lastCacheKey = currentCacheKey;
+
     return filteredItems;
   }
 
@@ -228,6 +254,66 @@ class _InventoryScreenState extends State<InventoryScreen> {
       final fileName = 'product_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final savedImage = await File(tempPath).copy('${appDir.path}/$fileName');
       return savedImage.path;
+    }
+
+    void _showBarcodeGeneratedMessage(String code) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 12),
+              Text("Barcode Generated: $code"),
+            ],
+          ),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+
+    void _showCustomPrefixDialog(Function(String) onGenerate) {
+      final prefixController = TextEditingController(text: "RSX");
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text("Custom Prefix", style: AppTextStyles.h3),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text("Enter your shop prefix (2-5 characters):"),
+              const SizedBox(height: 16),
+              TextField(
+                controller: prefixController,
+                maxLength: 5,
+                textCapitalization: TextCapitalization.characters,
+                decoration: InputDecoration(
+                  hintText: "e.g. RSX, SHOP",
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  counterText: "",
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent, foregroundColor: Colors.white),
+              onPressed: () {
+                final prefix = prefixController.text.trim().toUpperCase();
+                if (prefix.isEmpty) return;
+                final random = DateTime.now().millisecondsSinceEpoch % 1000000;
+                final code = "$prefix-${random.toString().padLeft(6, '0')}";
+                Navigator.pop(context);
+                onGenerate(code);
+              },
+              child: const Text("Generate"),
+            ),
+          ],
+        ),
+      );
     }
 
     showModalBottomSheet(
@@ -471,7 +557,92 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   
                   _buildSectionLabel("BARCODE / SKU", Icons.qr_code),
                   const SizedBox(height: 10),
-                  _buildStyledTextField(controller: barcodeCtrl, hint: "Item Barcode", icon: Icons.qr_code_2, iconColor: AppColors.primary),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStyledTextField(controller: barcodeCtrl, hint: "Item Barcode", icon: Icons.qr_code_2, iconColor: AppColors.primary),
+                      ),
+                      const SizedBox(width: 8),
+                      // Scan Button
+                      IconButton(
+                        onPressed: () async {
+                          final String? barcode = await Navigator.push<String>(
+                            context,
+                            MaterialPageRoute(builder: (context) => const FullScannerScreen(title: "Register Item")),
+                          );
+                          if (barcode != null) {
+                            setModalState(() {
+                              barcodeCtrl.text = barcode;
+                            });
+                          }
+                        },
+                        icon: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(color: AppColors.accent.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                          child: const Icon(Icons.qr_code_scanner, color: AppColors.accent),
+                        ),
+                      ),
+                      // Generate Button
+                      IconButton(
+                        onPressed: () {
+                          showModalBottomSheet(
+                            context: context,
+                            backgroundColor: Colors.white,
+                            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+                            builder: (ctx) => SafeArea(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text("Generate Barcode", style: AppTextStyles.h3),
+                                    const SizedBox(height: 20),
+                                    ListTile(
+                                      leading: const Icon(Icons.auto_awesome, color: AppColors.success),
+                                      title: const Text("Auto Generate (12 digits)"),
+                                      onTap: () {
+                                        final code = DateTime.now().millisecondsSinceEpoch.toString().substring(1);
+                                        setModalState(() => barcodeCtrl.text = code);
+                                        Navigator.pop(ctx);
+                                        _showBarcodeGeneratedMessage(code);
+                                      },
+                                    ),
+                                    ListTile(
+                                      leading: const Icon(Icons.inventory, color: AppColors.primary),
+                                      title: const Text("SKU Style (Alphanumeric)"),
+                                      onTap: () {
+                                        final hex = DateTime.now().millisecondsSinceEpoch.toRadixString(16).toUpperCase();
+                                        final code = "SKU-${hex.substring(hex.length - 8)}";
+                                        setModalState(() => barcodeCtrl.text = code);
+                                        Navigator.pop(ctx);
+                                        _showBarcodeGeneratedMessage(code);
+                                      },
+                                    ),
+                                    ListTile(
+                                      leading: const Icon(Icons.edit, color: Colors.purple),
+                                      title: const Text("Custom with Shop Prefix"),
+                                      onTap: () {
+                                        Navigator.pop(ctx);
+                                        _showCustomPrefixDialog((code) {
+                                          setModalState(() => barcodeCtrl.text = code);
+                                          _showBarcodeGeneratedMessage(code);
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                        icon: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                          child: const Icon(Icons.auto_fix_high, color: AppColors.primary),
+                        ),
+                      ),
+                    ],
+                  ),
                   
                   const SizedBox(height: 20),
                   
@@ -1039,6 +1210,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   void _showSellSheet(InventoryItem item) {
+    _audioPlayer.stop().then((_) => _audioPlayer.play(AssetSource('scanner_beep.mp3')));
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1109,7 +1281,21 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         _deleteItem(item);
                       }
                     },
-                    child: _buildGridItem(item),
+                    child: InventoryGridItem(
+                      item: item,
+                      onTap: () => _showEditSheet(item),
+                      onSell: () => _showSellSheet(item),
+                      onImageTap: (path, name) => _showImagePreview(path, name),
+                      onTagTap: (label, icon) {
+                        setState(() {
+                          if (icon == Icons.category) _selectedCategory = label;
+                          if (icon == Icons.account_tree) _selectedSubCategory = label;
+                          _searchController.clear();
+                          _searchQuery = "";
+                        });
+                        _loadInitialData();
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -1154,389 +1340,33 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     return await _confirmDelete();
                   },
                   child: _viewType == InventoryViewType.list 
-                    ? _buildListItem(item) 
-                    : _buildListItem(item), // Fallback, though builder handles grid separately below
+                    ? InventoryListItem(
+                        item: item,
+                        onTap: () => _showEditSheet(item),
+                        onSell: () => _showSellSheet(item),
+                        onImageTap: (path, name) => _showImagePreview(path, name),
+                        onTagTap: (label, icon) {
+                          setState(() {
+                            if (icon == Icons.category) _selectedCategory = label;
+                            if (icon == Icons.account_tree) _selectedSubCategory = label;
+                            _searchController.clear();
+                            _searchQuery = "";
+                          });
+                          _loadInitialData();
+                        },
+                      ) 
+                    : InventoryListItem(
+                        item: item,
+                        onTap: () => _showEditSheet(item),
+                        onSell: () => _showSellSheet(item),
+                        onImageTap: (path, name) => _showImagePreview(path, name),
+                      ),
                 ),
               ),
             ),
           );
         },
       ),
-    );
-  }
-
-  Widget _buildListItem(InventoryItem item) {
-    bool lowStock = item.stock < item.lowStockThreshold;
-    return Card(
-      elevation: 1,
-      shadowColor: Colors.black.withOpacity(0.05),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14), 
-        side: BorderSide(color: lowStock ? AppColors.error.withOpacity(0.3) : Colors.grey[200]!)
-      ),
-      margin: const EdgeInsets.only(bottom: 10),
-      child: InkWell(
-        onTap: () => _showEditSheet(item),
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Left: Image + SELL Button
-              Column(
-                children: [
-                  // Product Image
-                  GestureDetector(
-                    onTap: item.imagePath != null && File(item.imagePath!).existsSync()
-                        ? () => _showImagePreview(item.imagePath!, item.name)
-                        : null,
-                    child: Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.grey[300]!, width: 1),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(9),
-                        child: item.imagePath != null && File(item.imagePath!).existsSync()
-                            ? Image.file(
-                                File(item.imagePath!),
-                                fit: BoxFit.cover,
-                                width: 60,
-                                height: 60,
-                                filterQuality: FilterQuality.high,
-                              )
-                            : Icon(Icons.inventory_2_rounded, color: Colors.grey[400], size: 26),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  // SELL Button (Below Image)
-                  GestureDetector(
-                    onTap: () => _showSellSheet(item),
-                    child: Container(
-                      width: 60,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: AppColors.success,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.shopping_cart_checkout, color: Colors.white, size: 16),
-                          SizedBox(height: 2),
-                          Text("SELL", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 12),
-              
-              // Middle: Product Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Product Name
-                    Text(
-                      item.name, 
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
-                      maxLines: 1, 
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    
-                    // Price
-                    Row(
-                      children: [
-                        Text("Rs ", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey[600])),
-                        Text(
-                          item.price.toStringAsFixed(0), 
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.success),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    
-                    // Barcode
-                    if (item.barcode != "N/A")
-                      Row(
-                        children: [
-                          Icon(Icons.qr_code_2, size: 12, color: Colors.grey[500]),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              item.barcode, 
-                              style: TextStyle(fontSize: 10, color: Colors.grey[500]),
-                              maxLines: 1, 
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    const SizedBox(height: 6),
-                    
-                    // Category Tags
-                    Wrap(
-                      spacing: 4,
-                      runSpacing: 4,
-                      children: [
-                        if (item.category != "General") _buildCompactTag(item.category, Colors.purple, Icons.category, true),
-                        if (item.subCategory != "N/A") _buildCompactTag(item.subCategory, Colors.indigo, Icons.account_tree, true),
-                        if (item.size != "N/A") _buildCompactTag(item.size, Colors.orange, Icons.straighten, false),
-                        if (item.weight != "N/A") _buildCompactTag(item.weight, Colors.teal, Icons.scale, false),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Right: Stock
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: lowStock ? AppColors.error.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      "${item.stock}", 
-                      style: TextStyle(
-                        fontSize: 18, 
-                        fontWeight: FontWeight.bold, 
-                        color: lowStock ? AppColors.error : AppColors.success,
-                      ),
-                    ),
-                    Text(
-                      "Stock", 
-                      style: TextStyle(
-                        fontSize: 8, 
-                        color: lowStock ? AppColors.error : AppColors.success,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGridItem(InventoryItem item) {
-    bool lowStock = item.stock < item.lowStockThreshold;
-    return Card(
-      elevation: 2,
-      clipBehavior: Clip.antiAlias,
-      shadowColor: Colors.black.withOpacity(0.1),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16), 
-        side: BorderSide(color: lowStock ? AppColors.error.withOpacity(0.3) : Colors.grey[200]!, width: lowStock ? 2 : 1)
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image Section with Better Quality
-          Expanded(
-            flex: 3,
-            child: Stack(
-              children: [
-                GestureDetector(
-                  onTap: item.imagePath != null && File(item.imagePath!).existsSync()
-                      ? () => _showImagePreview(item.imagePath!, item.name)
-                      : null,
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      border: Border(bottom: BorderSide(color: Colors.grey[200]!, width: 1)),
-                    ),
-                    child: item.imagePath != null && File(item.imagePath!).existsSync()
-                        ? Image.file(
-                            File(item.imagePath!),
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
-                            filterQuality: FilterQuality.high,
-                            cacheWidth: 300, // Cache at higher resolution for clearer display
-                          )
-                        : Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.inventory_2_outlined, size: 36, color: Colors.grey[350]),
-                                const SizedBox(height: 4),
-                                Text("No Image", style: TextStyle(fontSize: 10, color: Colors.grey[400])),
-                              ],
-                            ),
-                          ),
-                  ),
-                ),
-                // Quick Actions: SELL
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: InkWell(
-                    onTap: () => _showSellSheet(item),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.success,
-                        borderRadius: const BorderRadius.only(topLeft: Radius.circular(16)),
-                        boxShadow: [
-                          BoxShadow(color: AppColors.success.withOpacity(0.3), blurRadius: 4),
-                        ],
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.shopping_cart_checkout, size: 14, color: Colors.white),
-                          SizedBox(width: 4),
-                          Text("SELL", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Info Section (Compact & Clear)
-          InkWell(
-            onTap: () => _showEditSheet(item),
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Product Name
-                  Text(
-                    item.name,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 6),
-                  
-                  // Price Row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const Text("Rs ", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.success)),
-                          Text(
-                            item.price.toStringAsFixed(0),
-                            style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 14),
-                          ),
-                        ],
-                      ),
-                      // Stock indicator (small inline)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: lowStock ? AppColors.error.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.inventory_2, size: 10, color: lowStock ? AppColors.error : AppColors.success),
-                            const SizedBox(width: 3),
-                            Text(
-                              "${item.stock}",
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: lowStock ? AppColors.error : AppColors.success),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  
-                  // Category Tags
-                  Wrap(
-                    spacing: 4,
-                    runSpacing: 4,
-                    children: [
-                      _buildCompactTag(item.category, Colors.purple, Icons.category, true),
-                      if (item.subCategory != "N/A")
-                        _buildCompactTag(item.subCategory, Colors.indigo, Icons.account_tree, true),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  
-                  // Barcode
-                  if (item.barcode != "N/A")
-                    Row(
-                      children: [
-                        Icon(Icons.qr_code_2, size: 11, color: Colors.grey[400]),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            item.barcode,
-                            style: TextStyle(color: Colors.grey[500], fontSize: 9, fontFamily: 'monospace'),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Removed _buildDetailedItem as per request
-
-
-  Widget _buildCompactTag(String label, Color color, IconData icon, bool clickable) {
-    return GestureDetector(
-      onTap: clickable ? () {
-        setState(() {
-          if (icon == Icons.category) _selectedCategory = label;
-          if (icon == Icons.account_tree) _selectedSubCategory = label;
-          _searchController.clear();
-          _searchQuery = "";
-        });
-        _loadInitialData();
-      } : null,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(6), border: Border.all(color: color.withOpacity(0.2))),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 10, color: color),
-            const SizedBox(width: 4),
-            Text(label, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600)),
-            if (clickable) ...[const SizedBox(width: 3), Icon(Icons.filter_list, size: 9, color: color)],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailedTag(String title, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
-      child: Text("$title: $label", style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold)),
     );
   }
 

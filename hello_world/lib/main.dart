@@ -47,8 +47,49 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'RsellX',
       theme: AppTheme.lightTheme,
-      themeMode: ThemeMode.light, // Can be made dynamic with SettingsProvider
+      themeMode: ThemeMode.light, 
       home: const SplashScreen(),
+      builder: (context, widget) {
+        ErrorWidget.builder = (FlutterErrorDetails details) {
+          return Scaffold(
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.red, size: 80),
+                    const SizedBox(height: 24),
+                    const Text("Something went wrong", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
+                    const Text(
+                      "An unexpected error occurred. Please try restarting the app.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
+                    ),
+                    const SizedBox(height: 32),
+                    ElevatedButton.icon(
+                      onPressed: () => Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (context) => const SplashScreen()),
+                        (route) => false,
+                      ),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text("RESTART APP"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        };
+        return widget!;
+      },
     );
   }
 }

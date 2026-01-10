@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:rsellx/providers/sales_provider.dart';
 import 'package:rsellx/providers/settings_provider.dart';
@@ -11,6 +12,7 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/services/reporting_service.dart';
 import '../../shared/widgets/full_scanner_screen.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:rsellx/core/constants/app_constants.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -31,6 +33,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   List<String> _displayedBillOrder = [];
   Map<String, List<SaleRecord>> _groupedSales = {};
   List<SaleRecord> _filteredHistory = [];
+  String _lastSyncKey = "";
 
   @override
   void initState() {
@@ -52,6 +55,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   void _syncData(List<SaleRecord> allHistory) {
+    final currentSyncKey = "${_selectedDate.toIso8601String()}|$_searchQuery|${allHistory.length}";
+    if (_lastSyncKey == currentSyncKey) return;
+
     _filteredHistory = allHistory.where((item) {
       final matchesDate = _isSameDay(item.date, _selectedDate);
       final name = item.name.toLowerCase();
@@ -79,7 +85,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     });
 
     _displayedBillOrder = fullBillOrder.take(_currentPage * _pageSize).toList();
-
+    _lastSyncKey = currentSyncKey;
   }
 
   void _loadMoreHistory() {
@@ -154,8 +160,69 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   String _formatDateManual(DateTime date) {
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    return "${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]} ${date.year}";
+    return "${date.day.toString().padLeft(2, '0')} ${AppConstants.monthLabels[date.month - 1]} ${date.year}";
+  }
+
+  void _showImagePreview(String imagePath, String productName) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(10),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: Colors.white,
+                ),
+                padding: const EdgeInsets.all(4),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.file(
+                    File(imagePath),
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 20,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  productName,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 0,
+              right: 0,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 24),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // === HELPERS ===
@@ -752,6 +819,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   onRefund: (item) => _handleRefund(item),
                                   onDelete: (id) => _handleDelete(id),
                                   onEdit: (item) => _handleEdit(item),
+                                  onImageTap: (path, name) => _showImagePreview(path, name),
                                 ),
                               ),
                             ),
@@ -776,6 +844,7 @@ class _BillCard extends StatelessWidget {
   final Function(SaleRecord) onRefund;
   final Function(String) onDelete;
   final Function(SaleRecord) onEdit;
+  final Function(String, String) onImageTap;
 
   const _BillCard({
     required this.billId,
@@ -783,6 +852,7 @@ class _BillCard extends StatelessWidget {
     required this.onRefund,
     required this.onDelete,
     required this.onEdit,
+    required this.onImageTap,
   });
 
   @override
@@ -815,18 +885,34 @@ class _BillCard extends StatelessWidget {
         child: Theme(
           data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
           child: ExpansionTile(
-            leading: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: allRefunded ? AppColors.error.withOpacity(0.1) : AppColors.secondary.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                allRefunded ? Icons.keyboard_return : Icons.receipt_long_outlined,
-                color: allRefunded ? AppColors.error : AppColors.secondary,
-                size: 20,
-              ),
-            ),
+            leading: items.length == 1 && items.first.imagePath != null && File(items.first.imagePath!).existsSync()
+                ? GestureDetector(
+                    onTap: () => onImageTap(items.first.imagePath!, items.first.name),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey[200]!),
+                        image: DecorationImage(
+                          image: FileImage(File(items.first.imagePath!)),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  )
+                : Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: allRefunded ? AppColors.error.withOpacity(0.1) : AppColors.secondary.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      allRefunded ? Icons.keyboard_return : Icons.receipt_long_outlined,
+                      color: allRefunded ? AppColors.error : AppColors.secondary,
+                      size: 20,
+                    ),
+                  ),
             title: Row(
               children: [
                 Expanded(
@@ -875,6 +961,11 @@ class _BillCard extends StatelessWidget {
                 onRefund: () => onRefund(item),
                 onDelete: () => onDelete(item.id),
                 onEdit: () => onEdit(item),
+                onImageTap: () {
+                  if (item.imagePath != null) {
+                    onImageTap(item.imagePath!, item.name);
+                  }
+                },
               )),
               const SizedBox(height: 8),
             ],
@@ -894,12 +985,14 @@ class _IndividualItemRow extends StatelessWidget {
   final VoidCallback onRefund;
   final VoidCallback onDelete;
   final VoidCallback onEdit;
+  final VoidCallback onImageTap;
 
   const _IndividualItemRow({
     required this.item,
     required this.onRefund,
     required this.onDelete,
     required this.onEdit,
+    required this.onImageTap,
   });
 
   @override
@@ -911,6 +1004,23 @@ class _IndividualItemRow extends StatelessWidget {
         children: [
           Row(
             children: [
+              if (item.imagePath != null && File(item.imagePath!).existsSync())
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: GestureDetector(
+                    onTap: onImageTap,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.file(
+                        File(item.imagePath!),
+                        width: 40,
+                        height: 40,
+                        fit: BoxFit.cover,
+                        cacheWidth: 80,
+                      ),
+                    ),
+                  ),
+                ),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

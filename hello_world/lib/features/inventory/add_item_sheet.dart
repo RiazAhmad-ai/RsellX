@@ -123,7 +123,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
   Future<String> _saveImageToAppDir(String tempPath) async {
     final appDir = await getApplicationDocumentsDirectory();
     final fileName = 'product_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    final savedImage = await File(tempPath).copy('${appDir.path}/\$fileName');
+    final savedImage = await File(tempPath).copy('${appDir.path}/$fileName');
     return savedImage.path;
   }
 
@@ -186,7 +186,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Scanned: \$foundText"),
+          content: Text("Scanned: $foundText"),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
         ),
@@ -408,7 +408,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
                 return;
               }
               final random = DateTime.now().millisecondsSinceEpoch % 1000000;
-              final code = "\$prefix-\${random.toString().padLeft(6, '0')}";
+              final code = "$prefix-${random.toString().padLeft(6, '0')}";
               Navigator.pop(context);
               setState(() {
                 _barcodeController.text = code;
@@ -429,7 +429,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
           children: [
             const Icon(Icons.check_circle, color: Colors.white),
             const SizedBox(width: 12),
-            Text("Barcode Generated: \$code"),
+            Text("Barcode Generated: $code"),
           ],
         ),
         backgroundColor: AppColors.success,
@@ -486,7 +486,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: \$e"), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red));
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
