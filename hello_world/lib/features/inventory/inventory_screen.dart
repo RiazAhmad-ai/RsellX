@@ -354,26 +354,29 @@ class _InventoryScreenState extends State<InventoryScreen> {
             );
           }
 
-          return Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-            ),
-            child: Container(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.85,
-              ),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-              ),
-              child: SingleChildScrollView(
-                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 24, top: 16, left: 24, right: 24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+          return GestureDetector(
+            onTap: () => FocusScope.of(context).unfocus(),
+            child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.85,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+                  ),
+                  child: SingleChildScrollView(
+                    keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                    physics: const BouncingScrollPhysics(),
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 24, top: 16, left: 24, right: 24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                       Center(
                         child: Container(
                           width: 50,
@@ -635,19 +638,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
       );
-      },
-      ),
-    );
-  }
+    },
+  ),
+);
+}
+
 
   // === 5. IMAGE PREVIEW ===
   void _showImagePreview(String imagePath, String productName) {
@@ -1060,7 +1064,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           padding: const EdgeInsets.all(16),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            childAspectRatio: 0.82,
+            childAspectRatio: 0.62, // Taller cards for more content space
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
           ),
@@ -1151,119 +1155,164 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Widget _buildListItem(InventoryItem item) {
+    bool lowStock = item.stock < item.lowStockThreshold;
     return Card(
-      elevation: 0,
+      elevation: 1,
+      shadowColor: Colors.black.withOpacity(0.05),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16), 
-        side: BorderSide(color: Colors.grey[200]!)
+        borderRadius: BorderRadius.circular(14), 
+        side: BorderSide(color: lowStock ? AppColors.error.withOpacity(0.3) : Colors.grey[200]!)
       ),
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 10),
       child: InkWell(
         onTap: () => _showEditSheet(item),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
+          padding: const EdgeInsets.all(10),
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              // Left: Image + SELL Button
+              Column(
                 children: [
-                   GestureDetector(
-                     onTap: item.imagePath != null && File(item.imagePath!).existsSync()
-                         ? () => _showImagePreview(item.imagePath!, item.name)
-                         : null,
-                     child: Container(
-                       width: 52, height: 52,
-                       decoration: BoxDecoration(
-                         gradient: item.imagePath == null 
-                             ? LinearGradient(
-                                 colors: [AppColors.accent.withOpacity(0.2), AppColors.accent.withOpacity(0.1)],
-                                 begin: Alignment.topLeft,
-                                 end: Alignment.bottomRight,
-                               )
-                             : null,
-                         borderRadius: BorderRadius.circular(12),
-                         border: item.imagePath != null ? Border.all(color: Colors.grey[300]!, width: 1) : null,
-                         image: item.imagePath != null && File(item.imagePath!).existsSync()
-                             ? DecorationImage(image: FileImage(File(item.imagePath!)), fit: BoxFit.cover)
-                             : null,
-                       ),
-                       child: item.imagePath == null || !File(item.imagePath!).existsSync()
-                           ? const Icon(Icons.inventory_2_rounded, color: AppColors.accent, size: 24)
-                           : null,
-                     ),
-                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(item.name, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Text("Rs ", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey[600])),
-                            Text(item.price.toStringAsFixed(0), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey[700])),
-                            const SizedBox(width: 12),
-                            Icon(Icons.qr_code_2, size: 14, color: Colors.grey[500]),
-                            const SizedBox(width: 4),
-                            Expanded(child: Text(item.barcode, style: TextStyle(fontSize: 12, color: Colors.grey[500]), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                          ],
-                        ),
-                      ],
+                  // Product Image
+                  GestureDetector(
+                    onTap: item.imagePath != null && File(item.imagePath!).existsSync()
+                        ? () => _showImagePreview(item.imagePath!, item.name)
+                        : null,
+                    child: Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey[300]!, width: 1),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(9),
+                        child: item.imagePath != null && File(item.imagePath!).existsSync()
+                            ? Image.file(
+                                File(item.imagePath!),
+                                fit: BoxFit.cover,
+                                width: 60,
+                                height: 60,
+                                filterQuality: FilterQuality.high,
+                              )
+                            : Icon(Icons.inventory_2_rounded, color: Colors.grey[400], size: 26),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  // SELL BUTTON
+                  const SizedBox(height: 6),
+                  // SELL Button (Below Image)
                   GestureDetector(
                     onTap: () => _showSellSheet(item),
                     child: Container(
-                      padding: const EdgeInsets.all(10),
+                      width: 60,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
-                        color: AppColors.success.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.success.withOpacity(0.2)),
+                        color: AppColors.success,
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.shopping_cart_checkout_rounded, color: AppColors.success, size: 20),
+                          Icon(Icons.shopping_cart_checkout, color: Colors.white, size: 16),
                           SizedBox(height: 2),
-                          Text("SELL", style: TextStyle(color: AppColors.success, fontSize: 8, fontWeight: FontWeight.bold)),
+                          Text("SELL", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: item.stock < item.lowStockThreshold ? AppColors.error.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Column(
-                      children: [
-                        Text("${item.stock}", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: item.stock < item.lowStockThreshold ? AppColors.error : AppColors.success)),
-                        Text("Stock", style: TextStyle(fontSize: 9, color: item.stock < item.lowStockThreshold ? AppColors.error : AppColors.success)),
-                      ],
-                    ),
-                  ),
                 ],
               ),
-              if (item.category != "General" || item.subCategory != "N/A" || item.size != "N/A" || item.weight != "N/A")
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      if (item.category != "General") _buildCompactTag(item.category, Colors.purple, Icons.category, true),
-                      if (item.subCategory != "N/A") _buildCompactTag(item.subCategory, Colors.indigo, Icons.account_tree, true),
-                      if (item.size != "N/A") _buildCompactTag(item.size, Colors.orange, Icons.straighten, false),
-                      if (item.weight != "N/A") _buildCompactTag(item.weight, Colors.teal, Icons.scale, false),
-                    ],
-                  ),
+              const SizedBox(width: 12),
+              
+              // Middle: Product Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Product Name
+                    Text(
+                      item.name, 
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
+                      maxLines: 1, 
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    
+                    // Price
+                    Row(
+                      children: [
+                        Text("Rs ", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey[600])),
+                        Text(
+                          item.price.toStringAsFixed(0), 
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.success),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    
+                    // Barcode
+                    if (item.barcode != "N/A")
+                      Row(
+                        children: [
+                          Icon(Icons.qr_code_2, size: 12, color: Colors.grey[500]),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              item.barcode, 
+                              style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                              maxLines: 1, 
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    const SizedBox(height: 6),
+                    
+                    // Category Tags
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: [
+                        if (item.category != "General") _buildCompactTag(item.category, Colors.purple, Icons.category, true),
+                        if (item.subCategory != "N/A") _buildCompactTag(item.subCategory, Colors.indigo, Icons.account_tree, true),
+                        if (item.size != "N/A") _buildCompactTag(item.size, Colors.orange, Icons.straighten, false),
+                        if (item.weight != "N/A") _buildCompactTag(item.weight, Colors.teal, Icons.scale, false),
+                      ],
+                    ),
+                  ],
                 ),
+              ),
+              
+              // Right: Stock
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: lowStock ? AppColors.error.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      "${item.stock}", 
+                      style: TextStyle(
+                        fontSize: 18, 
+                        fontWeight: FontWeight.bold, 
+                        color: lowStock ? AppColors.error : AppColors.success,
+                      ),
+                    ),
+                    Text(
+                      "Stock", 
+                      style: TextStyle(
+                        fontSize: 8, 
+                        color: lowStock ? AppColors.error : AppColors.success,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -1274,17 +1323,19 @@ class _InventoryScreenState extends State<InventoryScreen> {
   Widget _buildGridItem(InventoryItem item) {
     bool lowStock = item.stock < item.lowStockThreshold;
     return Card(
-      elevation: 0,
+      elevation: 2,
       clipBehavior: Clip.antiAlias,
+      shadowColor: Colors.black.withOpacity(0.1),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16), 
-        side: BorderSide(color: Colors.grey[200]!)
+        side: BorderSide(color: lowStock ? AppColors.error.withOpacity(0.3) : Colors.grey[200]!, width: lowStock ? 2 : 1)
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image Section (Organized with Preview)
+          // Image Section with Better Quality
           Expanded(
+            flex: 3,
             child: Stack(
               children: [
                 GestureDetector(
@@ -1294,89 +1345,71 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      image: item.imagePath != null && File(item.imagePath!).existsSync()
-                          ? DecorationImage(
-                              image: FileImage(File(item.imagePath!)),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
+                      color: Colors.grey[100],
+                      border: Border(bottom: BorderSide(color: Colors.grey[200]!, width: 1)),
                     ),
-                    child: item.imagePath == null || !File(item.imagePath!).existsSync()
-                        ? Icon(Icons.inventory_2_outlined, size: 40, color: Colors.grey[300])
-                        : null,
+                    child: item.imagePath != null && File(item.imagePath!).existsSync()
+                        ? Image.file(
+                            File(item.imagePath!),
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            filterQuality: FilterQuality.high,
+                            cacheWidth: 300, // Cache at higher resolution for clearer display
+                          )
+                        : Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.inventory_2_outlined, size: 36, color: Colors.grey[350]),
+                                const SizedBox(height: 4),
+                                Text("No Image", style: TextStyle(fontSize: 10, color: Colors.grey[400])),
+                              ],
+                            ),
+                          ),
                   ),
                 ),
-                // Stock Badge (Static, not clickable for edit yet)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: (lowStock ? AppColors.error : AppColors.success).withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4),
-                      ],
-                    ),
-                    child: Text(
-                      "${item.stock}",
-                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                // Quick Action: Edit Button over image
+                // Quick Actions: SELL
                 Positioned(
                   bottom: 0,
                   right: 0,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // SELL BUTTON (GRID)
-                      InkWell(
-                        onTap: () => _showSellSheet(item),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: AppColors.success.withOpacity(0.9),
-                            borderRadius: const BorderRadius.only(topLeft: Radius.circular(16)),
-                          ),
-                          child: const Row(
-                            children: [
-                              Icon(Icons.shopping_cart_checkout, size: 16, color: Colors.white),
-                              SizedBox(width: 4),
-                              Text("SELL", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                        ),
+                  child: InkWell(
+                    onTap: () => _showSellSheet(item),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.success,
+                        borderRadius: const BorderRadius.only(topLeft: Radius.circular(16)),
+                        boxShadow: [
+                          BoxShadow(color: AppColors.success.withOpacity(0.3), blurRadius: 4),
+                        ],
                       ),
-                      // EDIT ICON
-                      InkWell(
-                        onTap: () => _showEditSheet(item),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.8),
-                          ),
-                          child: const Icon(Icons.edit_note_rounded, size: 20, color: AppColors.accent),
-                        ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.shopping_cart_checkout, size: 14, color: Colors.white),
+                          SizedBox(width: 4),
+                          Text("SELL", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ],
             ),
           ),
           
-          // Info Section (Better Organized)
+          // Info Section (Compact & Clear)
           InkWell(
             onTap: () => _showEditSheet(item),
-            child: Padding(
+            child: Container(
               padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Product Name
                   Text(
                     item.name,
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
@@ -1385,19 +1418,43 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   ),
                   const SizedBox(height: 6),
                   
-                  // Price row with bold "Rs"
+                  // Price Row
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text("Rs ", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.success)),
-                      Text(
-                        item.price.toStringAsFixed(0),
-                        style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 13),
+                      Row(
+                        children: [
+                          const Text("Rs ", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.success)),
+                          Text(
+                            item.price.toStringAsFixed(0),
+                            style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ],
+                      ),
+                      // Stock indicator (small inline)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: lowStock ? AppColors.error.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.inventory_2, size: 10, color: lowStock ? AppColors.error : AppColors.success),
+                            const SizedBox(width: 3),
+                            Text(
+                              "${item.stock}",
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: lowStock ? AppColors.error : AppColors.success),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   
-                  // Category & Sub-Category Tags (Clickable)
+                  // Category Tags
                   Wrap(
                     spacing: 4,
                     runSpacing: 4,
@@ -1407,13 +1464,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         _buildCompactTag(item.subCategory, Colors.indigo, Icons.account_tree, true),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   
-                  // Barcode & Icons
-                  Row(
-                    children: [
-                      if (item.barcode != "N/A") ...[
-                        Icon(Icons.qr_code_2, size: 12, color: Colors.grey[400]),
+                  // Barcode
+                  if (item.barcode != "N/A")
+                    Row(
+                      children: [
+                        Icon(Icons.qr_code_2, size: 11, color: Colors.grey[400]),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
@@ -1424,8 +1481,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           ),
                         ),
                       ],
-                    ],
-                  ),
+                    ),
                 ],
               ),
             ),

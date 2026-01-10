@@ -97,6 +97,117 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
+  void _showCustomQuantityDialog(SalesProvider salesProvider, int index, int currentQty, String itemName) {
+    final TextEditingController qtyController = TextEditingController(text: currentQty.toString());
+    final availableStock = salesProvider.getAvailableStock(index);
+    final maxQty = currentQty + availableStock;
+    
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Column(
+          children: [
+            const Icon(Icons.edit, color: AppColors.primary, size: 32),
+            const SizedBox(height: 8),
+            Text(
+              "Set Quantity",
+              style: AppTextStyles.h2,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              itemName,
+              style: AppTextStyles.label.copyWith(fontSize: 12),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                "Available: $availableStock more (Max: $maxQty)",
+                style: const TextStyle(fontSize: 12, color: Colors.blue, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: qtyController,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              autofocus: true,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              decoration: InputDecoration(
+                hintText: "Enter quantity",
+                filled: true,
+                fillColor: Colors.grey[100],
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.secondary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () {
+              final newQty = int.tryParse(qtyController.text) ?? 0;
+              if (newQty < 1) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Quantity must be at least 1"), backgroundColor: Colors.orange),
+                );
+                return;
+              }
+              if (newQty > maxQty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Maximum available quantity is $maxQty"), backgroundColor: Colors.red),
+                );
+                return;
+              }
+              
+              int delta = newQty - currentQty;
+              if (delta != 0) {
+                bool success = salesProvider.updateCartItemQty(index, delta);
+                if (!success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Failed to update quantity"), backgroundColor: Colors.red),
+                  );
+                  return;
+                }
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text("Update", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -153,71 +264,179 @@ class _CartScreenState extends State<CartScreen> {
                           )
                         ],
                       ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        leading: GestureDetector(
-                          onTap: item.imagePath != null && File(item.imagePath!).existsSync()
-                              ? () => _showImagePreview(item.imagePath!, item.name)
-                              : null,
-                          child: Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              borderRadius: BorderRadius.circular(8),
-                              border: item.imagePath != null ? Border.all(color: Colors.grey[200]!) : null,
-                              image: item.imagePath != null && File(item.imagePath!).existsSync()
-                                  ? DecorationImage(image: FileImage(File(item.imagePath!)), fit: BoxFit.cover)
-                                  : null,
-                            ),
-                            child: item.imagePath == null || !File(item.imagePath!).existsSync()
-                                ? const Icon(Icons.image_not_supported_outlined, color: Colors.grey, size: 24)
-                                : null,
-                          ),
-                        ),
-                        title: Text(item.name, style: AppTextStyles.h3),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Text(
-                              "Rs ${Formatter.formatCurrency(item.price)} x ${item.qty}",
-                              style: AppTextStyles.label,
+                            // Leading: Image
+                            GestureDetector(
+                              onTap: item.imagePath != null && File(item.imagePath!).existsSync()
+                                  ? () => _showImagePreview(item.imagePath!, item.name)
+                                  : null,
+                              child: Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: item.imagePath != null ? Border.all(color: Colors.grey[200]!) : null,
+                                  image: item.imagePath != null && File(item.imagePath!).existsSync()
+                                      ? DecorationImage(image: FileImage(File(item.imagePath!)), fit: BoxFit.cover)
+                                      : null,
+                                ),
+                                child: item.imagePath == null || !File(item.imagePath!).existsSync()
+                                    ? const Icon(Icons.image_not_supported_outlined, color: Colors.grey, size: 24)
+                                    : null,
+                              ),
                             ),
-                            const SizedBox(height: 4),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 4,
+                            const SizedBox(width: 12),
+                            // Middle: Item Details
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(item.name, style: AppTextStyles.h3, maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    "Rs ${Formatter.formatCurrency(item.price)} each",
+                                    style: AppTextStyles.label.copyWith(fontSize: 12),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    "Total: Rs ${Formatter.formatCurrency(item.price * item.qty)}",
+                                    style: AppTextStyles.h3.copyWith(color: AppColors.primary, fontSize: 14),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 4,
+                                    children: [
+                                      if (item.category != "General")
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                                          child: Text(item.category, style: const TextStyle(fontSize: 9, color: Colors.purple, fontWeight: FontWeight.bold)),
+                                        ),
+                                      if (item.size != "N/A")
+                                        Container(
+                                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                           decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                                           child: Text("Size: ${item.size}", style: const TextStyle(fontSize: 9, color: Colors.orange, fontWeight: FontWeight.bold)),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Right: Quantity Controls + Delete
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                if (item.category != "General")
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                                    child: Text(item.category, style: const TextStyle(fontSize: 10, color: Colors.purple, fontWeight: FontWeight.bold)),
+                                // Quantity Controls Row
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.grey[300]!),
                                   ),
-                                if (item.size != "N/A")
-                                  Container(
-                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                     decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                                     child: Text("Size: ${item.size}", style: const TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.bold)),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      // Decrement Button
+                                      InkWell(
+                                        onTap: item.qty > 1 ? () {
+                                          bool success = salesProvider.updateCartItemQty(index, -1);
+                                          if (!success) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text("Cannot decrease quantity below 1"), backgroundColor: Colors.orange),
+                                            );
+                                          }
+                                        } : null,
+                                        borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(8),
+                                          child: Icon(
+                                            Icons.remove,
+                                            size: 18,
+                                            color: item.qty > 1 ? Colors.red : Colors.grey,
+                                          ),
+                                        ),
+                                      ),
+                                      // Quantity Display - Tap to enter custom number
+                                      GestureDetector(
+                                        onTap: () => _showCustomQuantityDialog(salesProvider, index, item.qty, item.name),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            border: Border.symmetric(vertical: BorderSide(color: Colors.grey[300]!)),
+                                          ),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                "${item.qty}",
+                                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                              ),
+                                              const Text(
+                                                "tap",
+                                                style: TextStyle(fontSize: 8, color: Colors.grey),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      // Increment Button
+                                      InkWell(
+                                        onTap: () {
+                                          bool success = salesProvider.updateCartItemQty(index, 1);
+                                          if (!success) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text("Not enough stock available!"), backgroundColor: Colors.red),
+                                            );
+                                          }
+                                        },
+                                        borderRadius: const BorderRadius.horizontal(right: Radius.circular(12)),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(8),
+                                          child: const Icon(
+                                            Icons.add,
+                                            size: 18,
+                                            color: Colors.green,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
+                                ),
+                                const SizedBox(height: 8),
+                                // Delete Button
+                                InkWell(
+                                  onTap: () => salesProvider.removeFromCart(index),
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.delete_outline, color: Colors.red, size: 16),
+                                        SizedBox(width: 4),
+                                        Text("Remove", style: TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                           ],
                         ),
-                        trailing: Row(
-                           mainAxisSize: MainAxisSize.min,
-                           children: [
-                             Text(
-                               "Rs ${Formatter.formatCurrency(item.price * item.qty)}",
-                               style: AppTextStyles.h3.copyWith(color: AppColors.primary),
-                             ),
-                             const SizedBox(width: 8),
-                             IconButton(
-                               icon: const Icon(Icons.delete_outline, color: Colors.red),
-                               onPressed: () => salesProvider.removeFromCart(index),
-                             ),
-                           ],
-                         ),
                       ),
                     );
                   },

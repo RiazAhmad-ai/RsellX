@@ -160,6 +160,48 @@ class SalesProvider extends ChangeNotifier {
     _cartBox.deleteAt(index);
   }
 
+  /// Update cart item quantity (increment/decrement)
+  /// Returns true if successful, false if not enough stock
+  bool updateCartItemQty(int index, int delta) {
+    final item = _cartBox.getAt(index);
+    if (item == null) return false;
+
+    final invItem = _inventoryBox.get(item.itemId);
+    int newQty = item.qty + delta;
+
+    // Cannot go below 1
+    if (newQty < 1) return false;
+
+    // Check stock for increment
+    if (delta > 0) {
+      if (invItem == null || invItem.stock < delta) return false;
+      // Deduct from inventory
+      invItem.stock -= delta;
+      invItem.save();
+    } else if (delta < 0) {
+      // Restore stock when decrementing
+      if (invItem != null) {
+        invItem.stock += (-delta);
+        invItem.save();
+      }
+    }
+
+    // Update cart item
+    item.qty = newQty;
+    item.profit = (item.price - item.actualPrice) * newQty;
+    item.save();
+    notifyListeners();
+    return true;
+  }
+
+  /// Get available stock for a cart item (current inventory stock)
+  int getAvailableStock(int index) {
+    final item = _cartBox.getAt(index);
+    if (item == null) return 0;
+    final invItem = _inventoryBox.get(item.itemId);
+    return invItem?.stock ?? 0;
+  }
+
   void clearCart() {
     for (var item in _cartBox.values) {
       final invItem = _inventoryBox.get(item.itemId);
