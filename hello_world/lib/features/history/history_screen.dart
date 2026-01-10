@@ -10,7 +10,6 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/services/reporting_service.dart';
 import '../../shared/widgets/full_scanner_screen.dart';
-import '../../shared/widgets/text_scanner_screen.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 class HistoryScreen extends StatefulWidget {
@@ -125,25 +124,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
     });
   }
 
+  // === TEXT SCANNER REMOVED - OCR functionality removed ===
 
-  void _openTextScanner() async {
-    final String? text = await Navigator.push<String>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const TextScannerScreen(),
-      ),
-    );
-
-    if (text != null && text.isNotEmpty) {
-      // Basic cleanup of scanned text
-      final cleanText = text.replaceAll('\n', ' ').trim();
-      setState(() {
-        _searchController.text = cleanText;
-        _searchQuery = cleanText;
-        _currentPage = 1;
-      });
-    }
-  }
 
   void _openSearchScanner() async {
     final String? barcode = await Navigator.push<String>(
@@ -712,20 +694,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 decoration: InputDecoration(
                   hintText: "Search items or status...",
                   prefixIcon: const Icon(Icons.search),
-                  suffixIcon: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                       IconButton(
-                        icon: const Icon(Icons.document_scanner_outlined, color: Colors.indigo),
-                        onPressed: _openTextScanner,
-                        tooltip: "OCR Text Scan",
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.qr_code_scanner, color: AppColors.primary),
-                        onPressed: _openSearchScanner,
-                        tooltip: "Barcode Scan",
-                      ),
-                    ],
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.qr_code_scanner, color: AppColors.primary),
+                    onPressed: _openSearchScanner,
+                    tooltip: "Barcode Scan",
                   ),
                   filled: true,
                   fillColor: Colors.white,

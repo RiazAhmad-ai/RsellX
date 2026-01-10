@@ -2,12 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:rsellx/providers/inventory_provider.dart';
 import '../../data/models/inventory_model.dart';
 import '../../shared/widgets/full_scanner_screen.dart';
-import '../../shared/widgets/text_scanner_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 
@@ -173,12 +171,8 @@ class _AddItemSheetState extends State<AddItemSheet> {
   // === TEXT / DOCUMENT SCANNER ===
   Future<void> _scanTextForBarcode() async {
     // Open new camera-based scanner
-    final String? scannedText = await Navigator.push<String>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const TextScannerScreen(),
-      ),
-    );
+    // OCR functionality removed
+    final String? scannedText = null;
 
     if (scannedText == null || scannedText.isEmpty) return;
     
@@ -641,21 +635,6 @@ class _AddItemSheetState extends State<AddItemSheet> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: const Icon(Icons.auto_awesome, color: Colors.white),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Scan Text Button
-                        Expanded(
-                          child: Tooltip(
-                            message: "Scan Text / Handwriting",
-                            child: GestureDetector(
-                              onTap: _scanTextForBarcode,
-                              child: Container(
-                                height: 50,
-                                decoration: BoxDecoration(color: Colors.indigo, borderRadius: BorderRadius.circular(12)),
-                                child: const Icon(Icons.document_scanner, color: Colors.white),
                               ),
                             ),
                           ),

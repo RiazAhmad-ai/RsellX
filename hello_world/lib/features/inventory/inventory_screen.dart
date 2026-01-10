@@ -3,12 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:rsellx/providers/inventory_provider.dart';
 import 'package:rsellx/providers/settings_provider.dart';
 import '../../shared/widgets/full_scanner_screen.dart';
-import '../../shared/widgets/text_scanner_screen.dart';
 import '../../data/models/inventory_model.dart';
 import '../../core/services/reporting_service.dart';
 import 'add_item_sheet.dart';
@@ -190,35 +188,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
-  // === 2a. TEXT / HANDWRITING SEARCH ===
-  Future<void> _scanTextForSearch() async {
-    final String? scannedText = await Navigator.push<String>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const TextScannerScreen(),
-      ),
-    );
-
-    if (scannedText == null || scannedText.isEmpty) return;
-    
-    // Clean up newlines for search query
-    String foundText = scannedText.replaceAll('\n', ' ');
-    
-    setState(() {
-      _searchQuery = foundText;
-      _searchController.text = foundText;
-    });
-    
-    _loadInitialData(); // Trigger search
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Found: $foundText"),
-        backgroundColor: AppColors.success,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
+  // === 2a. TEXT SEARCH (REMOVED - OCR Scanner removed) ===
+  // Text scanner functionality has been removed
+  // Users can use the search bar for manual text entry
 
   // === 3. DELETE ITEM ===
   void _deleteItem(InventoryItem item) {
@@ -853,16 +825,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           fillColor: Colors.grey[100],
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // TEXT SCANNER
-                    GestureDetector(
-                      onTap: _scanTextForSearch,
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: Colors.indigo, borderRadius: BorderRadius.circular(16)),
-                        child: const Icon(Icons.document_scanner, color: Colors.white),
                       ),
                     ),
                     const SizedBox(width: 8),

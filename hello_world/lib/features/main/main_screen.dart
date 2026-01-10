@@ -8,7 +8,7 @@ import '../expenses/expense_screen.dart';
 import '../../data/models/inventory_model.dart';
 import '../inventory/sell_item_sheet.dart';
 import '../../shared/widgets/full_scanner_screen.dart';
-import '../../shared/widgets/text_scanner_screen.dart';
+import '../../core/utils/manual_text_input.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../cart/cart_screen.dart';
@@ -87,143 +87,14 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  // === MANUAL SELL DIALOG ===
-  void _showManualSellDialog() {
-    final codeController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-             // Header
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: AppColors.accent,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.keyboard, color: Colors.white, size: 28),
-                  SizedBox(width: 10),
-                  Text("Manual Entry", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                ],
-              ),
-            ),
-            
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  const Text("Enter Product Code / Barcode", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                  const SizedBox(height: 20),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: TextField(
-                      controller: codeController,
-                      autofocus: true,
-                      style: const TextStyle(fontSize: 18, letterSpacing: 1, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                      decoration: const InputDecoration(
-                        hintText: "CODE HERE",
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.all(16),
-                        prefixIcon: Icon(Icons.qr_code_2, color: AppColors.primary),
-                      ),
-                      onSubmitted: (_) => _processManualSell(codeController.text),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: const Text("Cancel", style: TextStyle(fontSize: 16, color: Colors.grey)),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => _processManualSell(codeController.text),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.accent,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            elevation: 2,
-                          ),
-                          child: const Text("DONE", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                        ),
-                      ),
-                    ],
-                  )
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // === MANUAL SELL DIALOG (REMOVED) ===
 
-  void _processManualSell(String code) async {
-    if (code.trim().isEmpty) return;
-    Navigator.pop(context); // Close dialog
 
-    // Search for match in inventory
-    final match = context.read<InventoryProvider>().findItemByBarcode(code.trim());
-    
-    if (match != null) {
-      if (!mounted) return;
-      final result = await showModalBottomSheet<String>(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.white,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-        ),
-        builder: (context) => SellItemSheet(item: match),
-      );
-
-       if (result == "ADD_MORE") {
-        // Re-open scanner automatically ? Or manual?
-        // Let's just stay on screen for manual
-      } else if (result == "VIEW_CART") {
-        if (!mounted) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const CartScreen()),
-        );
-      }
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("❌ No item found with Code: $code"),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  // === OCR SCANNER FOR SELLING (SWIPE UP) ===
-  void _openOcrScanner() async {
-    final String? text = await Navigator.push<String>(
+  // === MANUAL TEXT INPUT (SWIPE UP) ===
+  void _openManualTextInput() async {
+    final String? text = await showManualTextInput(
       context,
-      MaterialPageRoute(
-        builder: (context) => const TextScannerScreen(),
-      ),
+      hintText: 'Enter product name or barcode...',
     );
 
     if (text != null && text.isNotEmpty) {
@@ -231,12 +102,6 @@ class _MainScreenState extends State<MainScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
          SnackBar(content: Text("Searching for: $cleanText..."), duration: const Duration(seconds: 1)),
       );
-      
-      // Find item by Name (OCR usually returns text/name) or Code
-      // Since OCR is unreliable for exact strings, we might want to do a "contains" search in provider
-      // But currently findItemByBarcode is an exact match.
-      // Let's try to match name first loosely if possible, otherwise rely on exact barcode match if it scanned a code as text.
-      // For now, let's treat it as a potential Name or Barcode search.
       
       final inventory = context.read<InventoryProvider>();
       InventoryItem? match = inventory.findItemByBarcode(cleanText); // Exact match check first
@@ -386,24 +251,13 @@ class _MainScreenState extends State<MainScreen> {
             height: 80, // Increased size for better visibility
             width: 80,
             child: Tooltip(
-              message: "Tap: Scan | Swipe Up: OCR | Swipe Down: Manual",
+              message: "Tap: Scan | Swipe Up: Manual Entry",
               child: GestureDetector(
                 // Swipe Detection (Up & Down)
                 onVerticalDragEnd: (details) {
                   if (details.primaryVelocity! < 0) { 
-                    // Swipe UP -> OCR
-                    _openOcrScanner();
-                  } else if (details.primaryVelocity! > 0) {
-                    // Swipe DOWN -> Manual (Keyboard)
-                    ScaffoldMessenger.of(context).showSnackBar(
-                       const SnackBar(
-                         content: Text("Manual Mode Activated ⌨️"), 
-                         duration: Duration(milliseconds: 600),
-                         backgroundColor: Colors.redAccent,
-                         behavior: SnackBarBehavior.floating,
-                       )
-                     );
-                    _showManualSellDialog();
+                    // Swipe UP -> Manual Text Input
+                    _openManualTextInput();
                   }
                 },
                 onTap: _openBarcodeScanner,
@@ -411,55 +265,98 @@ class _MainScreenState extends State<MainScreen> {
                   alignment: Alignment.topRight,
                   clipBehavior: Clip.none,
                   children: [
-                    // Main Circular Button
+                    // Main Circular Button (Premium Design)
                     Container(
-                      height: 72, 
-                      width: 72,
+                      height: 75,
+                      width: 75,
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [AppColors.accent, AppColors.accent.withOpacity(0.8)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.accent.withOpacity(0.4),
-                            blurRadius: 12,
-                            offset: const Offset(0, 6),
+                            color: AppColors.accent.withOpacity(0.3),
+                            blurRadius: 15,
+                            offset: const Offset(0, 8),
+                            spreadRadius: 2,
+                          ),
+                          BoxShadow(
+                            color: Colors.white.withOpacity(0.1),
+                            blurRadius: 0,
+                            offset: const Offset(0, -2),
                           ),
                         ],
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.keyboard_arrow_up, color: Colors.white.withOpacity(0.7), size: 18),
-                          const SizedBox(height: 2),
-                          const Icon(Icons.qr_code_scanner, size: 26, color: Colors.white),
-                          const SizedBox(height: 2),
-                          Icon(Icons.keyboard_arrow_down, color: Colors.white.withOpacity(0.7), size: 18),
-                        ],
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color(0xFF6366F1), // Indigo
+                              Color(0xFF3B82F6), // Blue
+                              Color(0xFF2563EB), // Deep Blue
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.25),
+                            width: 2.5,
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Upward Indicator for Swipe
+                            Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.keyboard_arrow_up_rounded, color: Colors.white, size: 18),
+                            ),
+                            const SizedBox(height: 5),
+                            const Icon(
+                              Icons.qr_code_scanner_rounded, 
+                              size: 30, 
+                              color: Colors.white,
+                              shadows: [
+                                Shadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
 
-                    // Cart Badge (Overlay)
+                    // Cart Badge (Premium Overlay)
                     if (cartCount > 0)
                       Positioned(
-                        top: 0,
-                        right: 0,
+                        top: -2,
+                        right: -2,
                         child: Container(
-                          padding: const EdgeInsets.all(6),
+                          height: 26,
+                          width: 26,
+                          alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: Colors.red,
+                            color: AppColors.primary,
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
+                            border: Border.all(color: Colors.white, width: 2.5),
                             boxShadow: [
-                              BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 4, offset: const Offset(0, 2))
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 6,
+                                offset: const Offset(0, 3)
+                              )
                             ]
                           ),
                           child: Text(
                             "$cartCount",
-                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900),
+                            style: const TextStyle(
+                              color: Colors.white, 
+                              fontSize: 10, 
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Roboto',
+                            ),
                           ),
                         ),
                       ),
@@ -475,9 +372,10 @@ class _MainScreenState extends State<MainScreen> {
       // === CHANGE 2: Buttons ki jagah badal di ===
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
-        notchMargin: 8.0,
+        notchMargin: 10.0,
         color: Colors.white,
-        elevation: 20,
+        elevation: 25,
+        surfaceTintColor: Colors.white,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
@@ -538,8 +436,21 @@ class _MainScreenState extends State<MainScreen> {
             style: AppTextStyles.label.copyWith(
               color: isActive ? AppColors.accent : AppColors.textSecondary,
               fontSize: 10,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
             ),
           ),
+          if (isActive)
+            Container(
+              margin: const EdgeInsets.only(top: 2),
+              height: 4,
+              width: 4,
+              decoration: const BoxDecoration(
+                color: AppColors.accent,
+                shape: BoxShape.circle,
+              ),
+            )
+          else
+            const SizedBox(height: 4),
         ],
       ),
     );
