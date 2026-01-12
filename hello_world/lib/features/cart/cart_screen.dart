@@ -10,6 +10,7 @@ import '../../core/services/reporting_service.dart';
 import '../../data/models/sale_model.dart';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
+import '../../core/utils/image_path_helper.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -62,7 +63,7 @@ class _CartScreenState extends State<CartScreen> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.file(
-                    File(imagePath),
+                    ImagePathHelper.getFile(imagePath),
                     fit: BoxFit.contain,
                   ),
                 ),
@@ -281,7 +282,7 @@ class _CartScreenState extends State<CartScreen> {
                           children: [
                             // Leading: Image
                             GestureDetector(
-                              onTap: item.imagePath != null && File(item.imagePath!).existsSync()
+                              onTap: item.imagePath != null && ImagePathHelper.exists(item.imagePath!)
                                   ? () => _showImagePreview(item.imagePath!, item.name)
                                   : null,
                               child: Container(
@@ -291,11 +292,14 @@ class _CartScreenState extends State<CartScreen> {
                                   color: Colors.grey[100],
                                   borderRadius: BorderRadius.circular(8),
                                   border: item.imagePath != null ? Border.all(color: Colors.grey[200]!) : null,
-                                  image: item.imagePath != null && File(item.imagePath!).existsSync()
-                                      ? DecorationImage(image: FileImage(File(item.imagePath!)), fit: BoxFit.cover)
+                                  image: item.imagePath != null && ImagePathHelper.exists(item.imagePath!)
+                                      ? DecorationImage(
+                                          image: ResizeImage(FileImage(ImagePathHelper.getFile(item.imagePath!)), width: 100),
+                                          fit: BoxFit.cover,
+                                        )
                                       : null,
                                 ),
-                                child: item.imagePath == null || !File(item.imagePath!).existsSync()
+                                child: item.imagePath == null || !ImagePathHelper.exists(item.imagePath!)
                                     ? const Icon(Icons.image_not_supported_outlined, color: Colors.grey, size: 24)
                                     : null,
                               ),

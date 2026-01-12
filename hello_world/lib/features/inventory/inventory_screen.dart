@@ -507,7 +507,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                 ],
                                 image: editImagePath != null && ImagePathHelper.exists(editImagePath!)
                                     ? DecorationImage(
-                                        image: FileImage(ImagePathHelper.getFile(editImagePath!)),
+                                        image: ResizeImage(FileImage(ImagePathHelper.getFile(editImagePath!)), width: 150),
                                         fit: BoxFit.cover,
                                       )
                                     : null,

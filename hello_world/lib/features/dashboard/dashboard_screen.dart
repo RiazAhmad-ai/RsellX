@@ -104,6 +104,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         'assets/logo.png',
                         height: 40,
                         width: 40,
+                        cacheWidth: 150, // Optimize memory usage
                         fit: BoxFit.cover,
                         errorBuilder: (c, o, s) => Container(
                           height: 40,

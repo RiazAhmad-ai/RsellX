@@ -334,7 +334,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _pickLogo() async {
     try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 500,
+        imageQuality: 80,
+      );
       if (image == null) return;
 
       final settingsProvider = context.read<SettingsProvider>();
@@ -426,6 +430,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       : Image.asset(
                           'assets/logo.png',
                           fit: BoxFit.cover,
+                          cacheWidth: 250,
                           errorBuilder: (c, o, s) => const Icon(
                             Icons.business_center,
                             color: Colors.red,

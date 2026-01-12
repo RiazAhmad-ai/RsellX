@@ -70,6 +70,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
                       final XFile? image = await _imagePicker.pickImage(
                         source: ImageSource.camera,
                         imageQuality: 70,
+                        maxWidth: 800,
                       );
                       if (image != null) {
                         final relativePath = await ImagePathHelper.saveImage(image.path);
@@ -88,6 +89,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
                       final XFile? image = await _imagePicker.pickImage(
                         source: ImageSource.gallery,
                         imageQuality: 70,
+                        maxWidth: 800,
                       );
                       if (image != null) {
                         final relativePath = await ImagePathHelper.saveImage(image.path);
