@@ -23,6 +23,7 @@ import '../../shared/widgets/cart_badge.dart';
 import '../cart/cart_screen.dart';
 import '../../data/models/sale_model.dart';
 import '../../providers/sales_provider.dart';
+import '../../core/utils/debouncer.dart';
 
 enum InventoryViewType { list, grid }
 
@@ -54,6 +55,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
   // Store provider reference to avoid context.read in dispose
   InventoryProvider? _inventoryProvider;
   final AudioPlayer _audioPlayer = AudioPlayer();
+  
+  // Debouncer for search performance
+  final Debouncer _searchDebouncer = Debouncer(milliseconds: 300);
 
   @override
   void initState() {
@@ -85,6 +89,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     _scrollController.dispose();
     _searchController.dispose();
     _audioPlayer.dispose();
+    _searchDebouncer.dispose();
     super.dispose();
   }
 
@@ -987,8 +992,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           child: TextField(
                         controller: _searchController,
                         onChanged: (val) {
-                          setState(() => _searchQuery = val);
-                          _loadInitialData();
+                          // Debounce search to avoid heavy calls on every keystroke
+                          _searchDebouncer.run(() {
+                            if (mounted) {
+                              setState(() => _searchQuery = val);
+                              _loadInitialData();
+                            }
+                          });
                         },
                         decoration: InputDecoration(
                           hintText: "Search by Name, Code or Category...",

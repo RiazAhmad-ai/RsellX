@@ -12,6 +12,7 @@ import 'package:rsellx/providers/sales_provider.dart';
 import 'package:rsellx/providers/settings_provider.dart';
 import 'package:rsellx/providers/backup_provider.dart';
 import 'package:rsellx/providers/credit_provider.dart';
+import 'package:rsellx/core/utils/image_path_helper.dart';
 
 void main() {
   runZonedGuarded(() async {
@@ -19,6 +20,9 @@ void main() {
     
     // Initialize Database
     await DatabaseService.init();
+    
+    // Initialize Image Path Helper for relative paths
+    await ImagePathHelper.init();
 
     runApp(
       MultiProvider(

@@ -10,6 +10,7 @@ import '../../shared/utils/formatting.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/services/reporting_service.dart';
+import '../../core/utils/debouncer.dart';
 
 class ExpenseScreen extends StatefulWidget {
   const ExpenseScreen({super.key});
@@ -27,6 +28,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
   // Search functionality
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
+  final Debouncer _searchDebouncer = Debouncer(milliseconds: 300);
 
   @override
   void initState() {
@@ -36,6 +38,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _searchDebouncer.dispose();
     super.dispose();
   }
 
@@ -465,9 +468,15 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               child: TextField(
                 controller: _searchController,
-                onChanged: (val) => setState(() {
-                  _searchQuery = val;
-                }),
+                onChanged: (val) {
+                  _searchDebouncer.run(() {
+                    if (mounted) {
+                      setState(() {
+                        _searchQuery = val;
+                      });
+                    }
+                  });
+                },
                 decoration: InputDecoration(
                   hintText: "Search expenses...",
                   hintStyle: TextStyle(color: Colors.grey.shade400),

@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
-import 'dart:math';
 import '../data/models/credit_model.dart';
+import '../core/utils/id_generator.dart';
 
 class CreditProvider extends ChangeNotifier {
   // Stream subscription for proper cleanup
@@ -65,11 +65,8 @@ class CreditProvider extends ChangeNotifier {
   double get totalToPay => payables.fold(0, (sum, item) => sum + item.balance);
 
   String _generateId() {
-    // Use timestamp + random for better uniqueness
-    // Alternative: Use UUID package for guaranteed uniqueness
-    final timestamp = DateTime.now().microsecondsSinceEpoch;
-    final random = Random().nextInt(999999);
-    return 'credit_${timestamp}_$random';
+    // Use UUID for guaranteed uniqueness
+    return IdGenerator.generateWithPrefix('credit');
   }
 
   Future<void> addCredit({
