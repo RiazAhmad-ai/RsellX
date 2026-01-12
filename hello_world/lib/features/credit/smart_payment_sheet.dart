@@ -78,7 +78,7 @@ class _SmartPaymentSheetState extends State<SmartPaymentSheet> {
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: themeColor),
               decoration: InputDecoration(
                 hintText: "Enter Amount",
-                fillColor: themeColor.withOpacity(0.05),
+                fillColor: _isRemoveMode ? const Color(0x0DFF0000) : const Color(0x0D448AFF),
                 filled: true,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                 contentPadding: const EdgeInsets.symmetric(vertical: 16),
@@ -249,7 +249,10 @@ class _SmartPaymentSheetState extends State<SmartPaymentSheet> {
       child: Row(
         children: [
            Container(
-             decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+             decoration: BoxDecoration(
+               color: isRefund ? const Color(0x1AFF0000) : (isEdit ? const Color(0x1AFFB000) : const Color(0x1A4CAF50)),
+               shape: BoxShape.circle,
+             ),
              padding: const EdgeInsets.all(8),
              child: Icon(icon, size: 16, color: color),
            ),

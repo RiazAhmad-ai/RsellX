@@ -8,6 +8,7 @@ import '../../data/models/inventory_model.dart';
 import '../../shared/widgets/full_scanner_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/utils/image_path_helper.dart';
 
 class AddItemSheet extends StatefulWidget {
   const AddItemSheet({super.key});
@@ -72,9 +73,9 @@ class _AddItemSheetState extends State<AddItemSheet> {
                         maxWidth: 800,
                       );
                       if (image != null) {
-                        final savedPath = await _saveImageToAppDir(image.path);
+                        final relativePath = await ImagePathHelper.saveImage(image.path);
                         setState(() {
-                          _selectedImage = File(savedPath);
+                          _selectedImage = ImagePathHelper.getFile(relativePath);
                         });
                       }
                     },
@@ -91,9 +92,9 @@ class _AddItemSheetState extends State<AddItemSheet> {
                         maxWidth: 800,
                       );
                       if (image != null) {
-                        final savedPath = await _saveImageToAppDir(image.path);
+                        final relativePath = await ImagePathHelper.saveImage(image.path);
                         setState(() {
-                          _selectedImage = File(savedPath);
+                          _selectedImage = ImagePathHelper.getFile(relativePath);
                         });
                       }
                     },
@@ -469,7 +470,7 @@ class _AddItemSheetState extends State<AddItemSheet> {
         subCategory: _subCategoryController.text.trim().isEmpty ? "N/A" : _subCategoryController.text.trim(),
         size: _sizeController.text.trim().isEmpty ? "N/A" : _sizeController.text.trim(),
         weight: _weightController.text.trim().isEmpty ? "N/A" : _weightController.text.trim(),
-        imagePath: _selectedImage?.path,
+        imagePath: _selectedImage != null ? ImagePathHelper.toRelativePath(_selectedImage!.path) : null,
       );
 
       context.read<InventoryProvider>().addInventoryItem(newItem);

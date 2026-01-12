@@ -7,6 +7,7 @@ import '../../data/models/inventory_model.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../shared/widgets/full_scanner_screen.dart';
+import '../../core/utils/id_generator.dart';
 
 class DamageScreen extends StatelessWidget {
   const DamageScreen({super.key});
@@ -33,7 +34,7 @@ class DamageScreen extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: const LinearGradient(colors: [Colors.redAccent, Colors.red]),
               borderRadius: BorderRadius.circular(20),
-              boxShadow: [BoxShadow(color: Colors.red.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 5))],
+              boxShadow: [BoxShadow(color: const Color(0x4DF44336), blurRadius: 10, offset: const Offset(0, 5))],
             ),
             child: Row(
               children: [
@@ -83,13 +84,13 @@ class DamageScreen extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 5, offset: const Offset(0, 2))],
+                          boxShadow: [BoxShadow(color: const Color(0x05000000), blurRadius: 5, offset: const Offset(0, 2))],
                         ),
                         child: ListTile(
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           leading: Container(
                             padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(color: Colors.red.withOpacity(0.05), shape: BoxShape.circle),
+                            decoration: const BoxDecoration(color: Color(0x0DF44336), shape: BoxShape.circle),
                             child: const Icon(Icons.close, color: Colors.red, size: 20),
                           ),
                           title: Text(record.itemName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
@@ -238,7 +239,7 @@ class _DamageFormSheetState extends State<DamageFormSheet> {
             if (selectedItem != null)
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.blue.withOpacity(0.05), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.blue.withOpacity(0.2))),
+                decoration: BoxDecoration(color: const Color(0x0D2196F3), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0x332196F3))),
                 child: Row(
                   children: [
                     const Icon(Icons.inventory_2, color: Colors.blue),
@@ -372,7 +373,7 @@ class _DamageFormSheetState extends State<DamageFormSheet> {
                   if (widget.editRecord == null) {
                     // Create New
                     final record = DamageRecord(
-                      id: "DMG-${DateTime.now().millisecondsSinceEpoch}",
+                      id: IdGenerator.generateId("DMG"),
                       itemId: selectedItem!.id,
                       itemName: selectedItem!.name,
                       qty: qty,

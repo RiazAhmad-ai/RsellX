@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import '../data/models/credit_model.dart';
 import '../core/utils/id_generator.dart';
+import '../core/utils/app_logger.dart';
 
 class CreditProvider extends ChangeNotifier {
   // Stream subscription for proper cleanup
@@ -18,11 +19,11 @@ class CreditProvider extends ChangeNotifier {
         _creditsBoxSubscription = _box.watch().listen((_) {
           notifyListeners();
         }, onError: (error) {
-          debugPrint('CreditProvider stream error: $error');
+          AppLogger.error('CreditProvider stream error', error: error);
         });
       }
     } catch (e) {
-      debugPrint('CreditProvider initialization error: $e');
+      AppLogger.error('CreditProvider initialization error', error: e);
     }
   }
   
@@ -93,7 +94,7 @@ class CreditProvider extends ChangeNotifier {
       await _box.put(record.id, record);
       notifyListeners();
     } catch (e) {
-      debugPrint('Error adding credit: $e');
+      AppLogger.error('Error adding credit', error: e);
       rethrow;
     }
   }

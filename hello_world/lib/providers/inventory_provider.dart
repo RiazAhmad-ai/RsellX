@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 import 'package:rsellx/data/models/inventory_model.dart';
 import 'package:rsellx/data/models/damage_model.dart';
+import 'package:rsellx/core/utils/app_logger.dart';
 
 class InventoryProvider extends ChangeNotifier {
   List<InventoryItem> _cachedInventory = [];
@@ -24,7 +25,7 @@ class InventoryProvider extends ChangeNotifier {
           _clearComputedCache();
           notifyListeners();
         }, onError: (error) {
-          debugPrint('InventoryProvider inventory stream error: $error');
+          AppLogger.error('InventoryProvider inventory stream error', error: error);
         });
       }
       
@@ -33,14 +34,14 @@ class InventoryProvider extends ChangeNotifier {
           _clearComputedCache();
           notifyListeners();
         }, onError: (error) {
-          debugPrint('InventoryProvider damage stream error: $error');
+          AppLogger.error('InventoryProvider damage stream error', error: error);
         });
       }
       
       // Initial load
       _refreshCache();
     } catch (e) {
-      debugPrint('InventoryProvider initialization error: $e');
+      AppLogger.error('InventoryProvider initialization error', error: e);
     }
   }
   

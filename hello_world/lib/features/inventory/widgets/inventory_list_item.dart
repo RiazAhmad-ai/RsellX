@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:rsellx/data/models/inventory_model.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/image_path_helper.dart';
 
 class InventoryListItem extends StatelessWidget {
   final InventoryItem item;
@@ -24,10 +25,10 @@ class InventoryListItem extends StatelessWidget {
     bool lowStock = item.stock < item.lowStockThreshold;
     return Card(
       elevation: 1,
-      shadowColor: Colors.black.withOpacity(0.05),
+      shadowColor: const Color(0x0D000000),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14), 
-        side: BorderSide(color: lowStock ? AppColors.error.withOpacity(0.3) : Colors.grey[200]!)
+        side: BorderSide(color: lowStock ? const Color(0x4DEB1F20) : const Color(0xFFEEEEEE))
       ),
       margin: const EdgeInsets.only(bottom: 10),
       child: InkWell(
@@ -42,7 +43,7 @@ class InventoryListItem extends StatelessWidget {
               Column(
                 children: [
                   GestureDetector(
-                    onTap: item.imagePath != null && File(item.imagePath!).existsSync()
+                    onTap: item.imagePath != null && ImagePathHelper.exists(item.imagePath!)
                         ? () => onImageTap(item.imagePath!, item.name)
                         : null,
                     child: Container(
@@ -55,9 +56,9 @@ class InventoryListItem extends StatelessWidget {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(9),
-                        child: item.imagePath != null && File(item.imagePath!).existsSync()
+                        child: item.imagePath != null && ImagePathHelper.exists(item.imagePath!)
                             ? Image.file(
-                                File(item.imagePath!),
+                                ImagePathHelper.getFile(item.imagePath!),
                                 fit: BoxFit.cover,
                                 width: 60,
                                 height: 60,
@@ -150,7 +151,7 @@ class InventoryListItem extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: lowStock ? AppColors.error.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
+                      color: lowStock ? const Color(0x1AEB1F20) : const Color(0x1A4CAF50),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(

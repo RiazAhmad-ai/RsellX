@@ -10,6 +10,7 @@ import '../../data/models/sale_model.dart';
 import '../../shared/utils/formatting.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/utils/image_path_helper.dart';
 
 class SellItemSheet extends StatefulWidget {
   final InventoryItem item;
@@ -174,7 +175,7 @@ class _SellItemSheetState extends State<SellItemSheet> {
               // Product Image / Icon
               GestureDetector(
                 onTap: () {
-                   if (widget.item.imagePath != null && File(widget.item.imagePath!).existsSync()) {
+                   if (widget.item.imagePath != null && ImagePathHelper.exists(widget.item.imagePath!)) {
                      showDialog(
                        context: context,
                        builder: (context) => Dialog(
@@ -189,7 +190,7 @@ class _SellItemSheetState extends State<SellItemSheet> {
                                child: ClipRRect(
                                  borderRadius: BorderRadius.circular(16),
                                  child: Image.file(
-                                   File(widget.item.imagePath!),
+                                   ImagePathHelper.getFile(widget.item.imagePath!),
                                    fit: BoxFit.contain,
                                  ),
                                ),
@@ -220,20 +221,20 @@ class _SellItemSheetState extends State<SellItemSheet> {
                   height: 60,
                   decoration: BoxDecoration(
                     color: widget.item.imagePath == null 
-                        ? AppColors.primary.withOpacity(0.1)
+                        ? const Color(0x1A000000)
                         : null,
                     borderRadius: BorderRadius.circular(12),
                     border: widget.item.imagePath != null 
                         ? Border.all(color: Colors.grey[300]!, width: 1)
                         : null,
-                    image: widget.item.imagePath != null && File(widget.item.imagePath!).existsSync()
+                    image: widget.item.imagePath != null && ImagePathHelper.exists(widget.item.imagePath!)
                         ? DecorationImage(
-                            image: FileImage(File(widget.item.imagePath!)),
+                            image: FileImage(ImagePathHelper.getFile(widget.item.imagePath!)),
                             fit: BoxFit.cover,
                           )
                         : null,
                   ),
-                  child: widget.item.imagePath == null || !File(widget.item.imagePath!).existsSync()
+                  child: widget.item.imagePath == null || !ImagePathHelper.exists(widget.item.imagePath!)
                       ? const Icon(
                           Icons.shopping_cart_checkout,
                           color: AppColors.primary,
@@ -287,25 +288,25 @@ class _SellItemSheetState extends State<SellItemSheet> {
                         if (widget.item.category != "General")
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                            decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                            decoration: BoxDecoration(color: const Color(0x1A9C27B0), borderRadius: BorderRadius.circular(4)),
                             child: Text(widget.item.category, style: const TextStyle(fontSize: 10, color: Colors.purple, fontWeight: FontWeight.bold)),
                           ),
                         if (widget.item.subCategory != "N/A")
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                            decoration: BoxDecoration(color: Colors.indigo.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                            decoration: BoxDecoration(color: const Color(0x1A3F51B5), borderRadius: BorderRadius.circular(4)),
                             child: Text(widget.item.subCategory, style: const TextStyle(fontSize: 10, color: Colors.indigo, fontWeight: FontWeight.bold)),
                           ),
                         if (widget.item.size != "N/A")
                           Container(
                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                             decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                             decoration: BoxDecoration(color: const Color(0x1AFF9800), borderRadius: BorderRadius.circular(4)),
                              child: Text(widget.item.size, style: const TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.bold)),
                           ),
                         if (widget.item.weight != "N/A")
                           Container(
                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                             decoration: BoxDecoration(color: Colors.teal.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                             decoration: BoxDecoration(color: const Color(0x1A009688), borderRadius: BorderRadius.circular(4)),
                              child: Text(widget.item.weight, style: const TextStyle(fontSize: 10, color: Colors.teal, fontWeight: FontWeight.bold)),
                           ),
                       ],
@@ -424,7 +425,7 @@ class _SellItemSheetState extends State<SellItemSheet> {
               labelStyle: TextStyle(color: AppColors.accent),
               prefixText: "Rs ",
               filled: true,
-              fillColor: AppColors.accent.withOpacity(0.05),
+              fillColor: const Color(0x0D448AFF),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,

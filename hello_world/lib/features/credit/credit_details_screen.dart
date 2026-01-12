@@ -60,13 +60,13 @@ class CreditDetailsScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5))],
+                boxShadow: [BoxShadow(color: const Color(0x1A9E9E9E), blurRadius: 10, offset: const Offset(0, 5))],
               ),
               child: Column(
                 children: [
                   CircleAvatar(
                     radius: 30,
-                    backgroundColor: primaryColor.withOpacity(0.1),
+                    backgroundColor: isLend ? const Color(0x1A000000) : const Color(0x1AD32F2F),
                     child: Text(record.name[0].toUpperCase(), style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: primaryColor)),
                   ),
                   const SizedBox(height: 12),
@@ -93,9 +93,9 @@ class CreditDetailsScreen extends StatelessWidget {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.1),
+                              color: const Color(0x1A4CAF50),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.green.withOpacity(0.3)),
+                              border: Border.all(color: const Color(0x4D4CAF50)),
                             ),
                             child: Row(
                               children: const [
@@ -163,7 +163,7 @@ class CreditDetailsScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5))],
+                boxShadow: [BoxShadow(color: const Color(0x1A9E9E9E), blurRadius: 10, offset: const Offset(0, 5))],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -243,14 +243,14 @@ class CreditDetailsScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: Colors.grey[100]!)),
-        color: isLatest ? Colors.blue.withOpacity(0.02) : Colors.transparent,
+        color: isLatest ? const Color(0x052196F3) : Colors.transparent,
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: isEdit ? const Color(0x1AFFB000) : const Color(0x1A4CAF50),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 16),

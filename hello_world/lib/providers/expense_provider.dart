@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 import 'package:rsellx/data/models/expense_model.dart';
+import 'package:rsellx/core/utils/app_logger.dart';
 
 class ExpenseProvider extends ChangeNotifier {
   // Stream subscription for proper cleanup
@@ -22,12 +23,11 @@ class ExpenseProvider extends ChangeNotifier {
           _invalidateCache(); // Clear cache when data changes
           notifyListeners();
         }, onError: (error) {
-          // Handle stream errors gracefully
-          debugPrint('ExpenseProvider stream error: $error');
+          AppLogger.error('ExpenseProvider stream error', error: error);
         });
       }
     } catch (e) {
-      debugPrint('ExpenseProvider initialization error: $e');
+      AppLogger.error('ExpenseProvider initialization error', error: e);
     }
   }
   

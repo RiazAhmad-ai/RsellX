@@ -23,6 +23,7 @@ import '../../shared/widgets/cart_badge.dart';
 import '../cart/cart_screen.dart';
 import '../../data/models/sale_model.dart';
 import '../../providers/sales_provider.dart';
+import '../../core/utils/image_path_helper.dart';
 import '../../core/utils/debouncer.dart';
 
 enum InventoryViewType { list, grid }
@@ -856,7 +857,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.file(
-                    File(imagePath),
+                    ImagePathHelper.getFile(imagePath),
                     fit: BoxFit.contain,
                   ),
                 ),

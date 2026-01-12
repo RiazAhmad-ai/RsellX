@@ -27,4 +27,7 @@ class IdGenerator {
   static String generateWithPrefix(String prefix) {
     return '$prefix-${_uuid.v4().substring(0, 8)}';
   }
+
+  /// Alias for generateWithPrefix for backward compatibility/preferred naming
+  static String generateId(String prefix) => generateWithPrefix(prefix);
 }

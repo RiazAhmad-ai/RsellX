@@ -101,7 +101,7 @@ class _CreditScreenState extends State<CreditScreen> with SingleTickerProviderSt
               indicator: BoxDecoration(
                 color: Colors.blueAccent, 
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: [BoxShadow(color: Colors.blueAccent.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 2))],
+                boxShadow: [BoxShadow(color: const Color(0x4D448AFF), blurRadius: 8, offset: const Offset(0, 2))],
               ),
               indicatorSize: TabBarIndicatorSize.tab,
               tabs: const [
@@ -141,7 +141,7 @@ class _CreditScreenState extends State<CreditScreen> with SingleTickerProviderSt
         color: color,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
-          BoxShadow(color: color.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 5)),
+          BoxShadow(color: Color.fromRGBO(color.red, color.green, color.blue, 0.3), blurRadius: 10, offset: const Offset(0, 5)),
         ],
       ),
       child: Column(
@@ -222,7 +222,7 @@ class CreditList extends StatelessWidget {
             border: Border.all(color: Colors.grey[100]!),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.05),
+                color: const Color(0x0D9E9E9E),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -232,7 +232,7 @@ class CreditList extends StatelessWidget {
             contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             leading: CircleAvatar(
               radius: 24,
-              backgroundColor: themeColor.withOpacity(0.08),
+              backgroundColor: isLend ? const Color(0x14000000) : const Color(0x14D32F2F),
               child: Text(
                 item.name.substring(0, 1).toUpperCase(),
                 style: TextStyle(color: themeColor, fontWeight: FontWeight.bold, fontSize: 18),

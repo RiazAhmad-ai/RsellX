@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:provider/provider.dart';
+import '../../core/utils/image_path_helper.dart';
 import 'package:rsellx/providers/inventory_provider.dart';
 import 'package:rsellx/data/models/inventory_model.dart';
 import '../../core/theme/app_colors.dart';
@@ -69,11 +70,11 @@ class _LowStockScreenState extends State<LowStockScreen> {
               ),
               child: Row(
                 children: [
-                  if (item.imagePath != null && File(item.imagePath!).existsSync())
+                  if (item.imagePath != null && ImagePathHelper.exists(item.imagePath!))
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Image.file(
-                        File(item.imagePath!),
+                        ImagePathHelper.getFile(item.imagePath!),
                         width: 50,
                         height: 50,
                         fit: BoxFit.cover,
@@ -130,7 +131,7 @@ class _LowStockScreenState extends State<LowStockScreen> {
                 hintText: "Enter quantity",
                 prefixIcon: const Icon(Icons.add_circle_outline, color: AppColors.accent),
                 filled: true,
-                fillColor: AppColors.accent.withOpacity(0.05),
+                fillColor: const Color(0x0D448AFF),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -229,7 +230,7 @@ class _LowStockScreenState extends State<LowStockScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(30),
               child: Image.file(
-                File(imagePath),
+                ImagePathHelper.getFile(imagePath),
                 fit: BoxFit.contain,
               ),
             ),
@@ -301,7 +302,7 @@ class _LowStockScreenState extends State<LowStockScreen> {
                         decoration: BoxDecoration(
                           color: Colors.red[50],
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.red.withOpacity(0.3)),
+                          border: Border.all(color: const Color(0x4DF44336)),
                         ),
                         child: Row(
                           children: [
@@ -340,7 +341,7 @@ class _LowStockScreenState extends State<LowStockScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: outOfStock ? Colors.red : Colors.orange.withOpacity(0.5),
+          color: outOfStock ? Colors.red : const Color(0x80FF9800),
           width: outOfStock ? 2 : 1,
         ),
       ),
@@ -356,7 +357,7 @@ class _LowStockScreenState extends State<LowStockScreen> {
                 children: [
                   // Left: Image
                   GestureDetector(
-                    onTap: item.imagePath != null && File(item.imagePath!).existsSync()
+                    onTap: item.imagePath != null && ImagePathHelper.exists(item.imagePath!)
                         ? () => _showImagePreview(item.imagePath!, item.name)
                         : null,
                     child: Container(
@@ -369,9 +370,9 @@ class _LowStockScreenState extends State<LowStockScreen> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(11),
-                        child: item.imagePath != null && File(item.imagePath!).existsSync()
+                        child: item.imagePath != null && ImagePathHelper.exists(item.imagePath!)
                             ? Image.file(
-                                File(item.imagePath!),
+                                ImagePathHelper.getFile(item.imagePath!),
                                 fit: BoxFit.cover,
                                 width: 70,
                                 height: 70,
@@ -460,8 +461,8 @@ class _LowStockScreenState extends State<LowStockScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                         decoration: BoxDecoration(
                           color: outOfStock 
-                              ? Colors.red.withOpacity(0.1) 
-                              : Colors.orange.withOpacity(0.1),
+                              ? const Color(0x1AFF0000) 
+                              : const Color(0x1AFF9800),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(

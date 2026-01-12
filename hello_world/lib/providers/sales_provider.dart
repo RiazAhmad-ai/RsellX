@@ -6,6 +6,7 @@ import 'package:rsellx/data/models/sale_model.dart';
 import 'package:rsellx/data/models/expense_model.dart';
 import 'package:rsellx/data/models/damage_model.dart';
 import 'package:rsellx/core/constants/app_constants.dart';
+import 'package:rsellx/core/utils/app_logger.dart';
 
 class SalesProvider extends ChangeNotifier {
   // === Cache ===
@@ -33,7 +34,7 @@ class SalesProvider extends ChangeNotifier {
           _analyticsCache.clear();
           notifyListeners();
         }, onError: (error) {
-          debugPrint('SalesProvider history stream error: $error');
+          AppLogger.error('SalesProvider history stream error', error: error);
         });
       }
       
@@ -41,7 +42,7 @@ class SalesProvider extends ChangeNotifier {
         _cartBoxSubscription = _cartBox.watch().listen((_) {
           notifyListeners();
         }, onError: (error) {
-          debugPrint('SalesProvider cart stream error: $error');
+          AppLogger.error('SalesProvider cart stream error', error: error);
         });
       }
       
@@ -50,7 +51,7 @@ class SalesProvider extends ChangeNotifier {
           _analyticsCache.clear();
           notifyListeners();
         }, onError: (error) {
-          debugPrint('SalesProvider expenses stream error: $error');
+          AppLogger.error('SalesProvider expenses stream error', error: error);
         });
       }
       
@@ -59,14 +60,14 @@ class SalesProvider extends ChangeNotifier {
           _analyticsCache.clear();
           notifyListeners();
         }, onError: (error) {
-          debugPrint('SalesProvider damage stream error: $error');
+          AppLogger.error('SalesProvider damage stream error', error: error);
         });
       }
       
       // Initial Load
       _refreshCache();
     } catch (e) {
-      debugPrint('SalesProvider initialization error: $e');
+      AppLogger.error('SalesProvider initialization error', error: e);
     }
   }
   

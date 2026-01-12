@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
+import 'package:rsellx/core/utils/app_logger.dart';
 
 class SettingsProvider extends ChangeNotifier {
   StreamSubscription? _settingsSubscription;
@@ -15,11 +16,11 @@ class SettingsProvider extends ChangeNotifier {
         _settingsSubscription = _settingsBox.watch().listen((_) {
           notifyListeners();
         }, onError: (error) {
-          debugPrint('SettingsProvider stream error: $error');
+          AppLogger.error('SettingsProvider stream error', error: error);
         });
       }
     } catch (e) {
-      debugPrint('SettingsProvider initialization error: $e');
+      AppLogger.error('SettingsProvider initialization error', error: e);
     }
   }
 
