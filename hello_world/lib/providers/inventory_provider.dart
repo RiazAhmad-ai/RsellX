@@ -66,6 +66,7 @@ class InventoryProvider extends ChangeNotifier {
 
   void _refreshCache() {
     _cachedInventory = _inventoryBox.values.toList();
+    _rebuildBarcodeIndex();
     _inventoryDirty = false;
   }
 
@@ -131,10 +132,24 @@ class InventoryProvider extends ChangeNotifier {
   double? _cachedTotalDamageLoss;
   int? _cachedLowStockCount;
   
+  // === BARCODE INDEX ===
+  final Map<String, InventoryItem> _barcodeIndex = {};
+
+  void _rebuildBarcodeIndex() {
+    _barcodeIndex.clear();
+    for (var item in _cachedInventory) {
+      if (item.barcode.isNotEmpty) {
+        _barcodeIndex[item.barcode] = item;
+      }
+    }
+  }
+
   void _clearComputedCache() {
     _cachedTotalStockValue = null;
     _cachedTotalDamageLoss = null;
     _cachedLowStockCount = null;
+    // Index rebuild needed when inventory changes
+    _rebuildBarcodeIndex();
   }
 
   double getTotalStockValue() {
@@ -169,11 +184,8 @@ class InventoryProvider extends ChangeNotifier {
   }
 
   InventoryItem? findItemByBarcode(String barcode) {
-    try {
-      // Search in memory cache
-      return inventory.firstWhere((item) => item.barcode == barcode);
-    } catch (_) {
-      return null;
-    }
+    if (_inventoryDirty) _refreshCache();
+    // O(1) Lookup
+    return _barcodeIndex[barcode];
   }
 }

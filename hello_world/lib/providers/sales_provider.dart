@@ -32,6 +32,7 @@ class SalesProvider extends ChangeNotifier {
         _historyBoxSubscription = _historyBox.watch().listen((_) {
           _historyDirty = true;
           _analyticsCache.clear();
+          _cachedTopProducts = null;
           notifyListeners();
         }, onError: (error) {
           AppLogger.error('SalesProvider history stream error', error: error);
@@ -95,12 +96,33 @@ class SalesProvider extends ChangeNotifier {
     return _cachedHistory;
   }
   
+  // === Date Index for Fast Lookup ===
+  final Map<String, List<SaleRecord>> _dateIndex = {};
+
   void _refreshCache() {
     var list = _historyBox.values.toList();
-    // Sorting can be expensive, do it only when necessary
+    // Sorting newest first
     list.sort((a, b) => b.id.compareTo(a.id));
     _cachedHistory = list;
+    
+    // Build Date Index
+    _dateIndex.clear();
+    for (var item in list) {
+       // Format YYYY-MM-DD
+       final dateKey = "${item.date.year}-${item.date.month}-${item.date.day}";
+       if (!_dateIndex.containsKey(dateKey)) {
+         _dateIndex[dateKey] = [];
+       }
+       _dateIndex[dateKey]!.add(item);
+    }
+    
     _historyDirty = false;
+  }
+  
+  List<SaleRecord> getSalesByDate(DateTime date) {
+    if (_historyDirty) _refreshCache();
+    final dateKey = "${date.year}-${date.month}-${date.day}";
+    return _dateIndex[dateKey] ?? [];
   }
 
   List<SaleRecord> get _validHistory => historyItems.where((h) => h.status != "Refunded").toList();
@@ -615,19 +637,24 @@ class SalesProvider extends ChangeNotifier {
     };
   }
 
+  List<Map<String, dynamic>>? _cachedTopProducts;
+  
   List<Map<String, dynamic>> getTopSellingProducts({int limit = 5}) {
-    // This could also be cached if needed, but for now it's okay.
+    if (_cachedTopProducts != null) return _cachedTopProducts!.take(limit).toList();
+    
     final Map<String, int> productSales = {};
     for (var sale in _validHistory) {
       productSales[sale.name] = (productSales[sale.name] ?? 0) + sale.qty;
     }
     var sortedEntries = productSales.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-
-    return sortedEntries.take(limit).map((e) => {
+      
+    _cachedTopProducts = sortedEntries.map((e) => {
       'name': e.key,
       'qty': e.value,
     }).toList();
+
+    return _cachedTopProducts!.take(limit).toList();
   }
 
   Future<void> clearAllData() async {

@@ -14,6 +14,7 @@ import '../../core/services/reporting_service.dart';
 import '../../shared/widgets/full_scanner_screen.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:rsellx/core/constants/app_constants.dart';
+import '../../core/utils/debouncer.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -35,6 +36,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Map<String, List<SaleRecord>> _groupedSales = {};
   List<SaleRecord> _filteredHistory = [];
   String _lastSyncKey = "";
+  final Debouncer _searchDebouncer = Debouncer(milliseconds: 300);
 
   @override
   void initState() {
@@ -46,6 +48,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   void dispose() {
     _scrollController.dispose();
     _searchController.dispose();
+    _searchDebouncer.dispose();
     super.dispose();
   }
 
@@ -93,7 +96,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
     if (_isLoadingMore) return;
     
     final salesProvider = context.read<SalesProvider>();
-    final allHistory = salesProvider.historyItems;
+    // Optimized access: Only get items for the selected date
+    final allHistory = salesProvider.getSalesByDate(_selectedDate);
 
     final filtered = allHistory.where((item) {
       final matchesDate = _isSameDay(item.date, _selectedDate);
@@ -634,8 +638,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final salesProvider = context.watch<SalesProvider>();
     final settingsProvider = context.watch<SettingsProvider>();
 
-    // Sync data reactively from the provider's source of truth
-    _syncData(salesProvider.historyItems);
+    // Sync data reactively from the provider's source of truth using optimized getter
+    _syncData(salesProvider.getSalesByDate(_selectedDate));
 
     double dayTotal = 0;
     double dayProfit = 0;
@@ -782,10 +786,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
               padding: const EdgeInsets.all(16.0),
               child: TextField(
                 controller: _searchController,
-                onChanged: (val) => setState(() {
-                  _searchQuery = val;
-                  _currentPage = 1;
-                }),
+                onChanged: (val) {
+                  _searchDebouncer.run(() {
+                    setState(() {
+                      _searchQuery = val;
+                      _currentPage = 1;
+                    });
+                  });
+                },
                 decoration: InputDecoration(
                   hintText: "Search items or status...",
                   prefixIcon: const Icon(Icons.search),

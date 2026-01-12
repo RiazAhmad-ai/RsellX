@@ -54,8 +54,8 @@ class InventoryGridItem extends StatelessWidget {
                             fit: BoxFit.cover,
                             width: double.infinity,
                             height: double.infinity,
-                            filterQuality: FilterQuality.high,
-                            cacheWidth: 300,
+                            cacheWidth: 200, // Reduced from 300 for better performance in grids
+                            errorBuilder: (c, o, s) => Center(child: Icon(Icons.broken_image, color: Colors.grey[400], size: 30)),
                           )
                         : Center(
                             child: Column(

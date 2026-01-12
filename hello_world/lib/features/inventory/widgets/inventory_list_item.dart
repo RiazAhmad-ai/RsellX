@@ -62,8 +62,8 @@ class InventoryListItem extends StatelessWidget {
                                 fit: BoxFit.cover,
                                 width: 60,
                                 height: 60,
-                                filterQuality: FilterQuality.high,
-                                cacheWidth: 120,
+                                cacheWidth: 120, // Optimization
+                                errorBuilder: (c, o, s) => Icon(Icons.broken_image, color: Colors.grey[400], size: 26),
                               )
                             : Icon(Icons.inventory_2_rounded, color: Colors.grey[400], size: 26),
                       ),

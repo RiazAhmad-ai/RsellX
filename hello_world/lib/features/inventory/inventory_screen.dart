@@ -1291,6 +1291,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
           ),
+          addAutomaticKeepAlives: false, // Performance: Don't keep non-visible items
+          addRepaintBoundaries: true,
           itemCount: _displayedItems.length,
           itemBuilder: (context, index) {
             final item = _displayedItems[index];
@@ -1349,6 +1351,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
       child: ListView.builder(
         controller: _scrollController,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        addAutomaticKeepAlives: false,
+        addRepaintBoundaries: true,
         itemCount: _displayedItems.length,
         itemBuilder: (context, index) {
           final item = _displayedItems[index];
