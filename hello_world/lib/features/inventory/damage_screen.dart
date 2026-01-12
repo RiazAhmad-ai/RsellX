@@ -263,6 +263,17 @@ class _DamageFormSheetState extends State<DamageFormSheet> {
                       decoration: InputDecoration(
                         hintText: "Search product...",
                         prefixIcon: const Icon(Icons.search),
+                        suffixIcon: searchCtrl.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, color: Colors.grey),
+                                onPressed: () {
+                                  setState(() {
+                                    searchCtrl.clear();
+                                    filteredItems = [];
+                                  });
+                                },
+                              )
+                            : null,
                         filled: true,
                         fillColor: Colors.grey[100],
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),

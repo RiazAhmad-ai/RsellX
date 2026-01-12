@@ -789,10 +789,26 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 decoration: InputDecoration(
                   hintText: "Search items or status...",
                   prefixIcon: const Icon(Icons.search),
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.qr_code_scanner, color: AppColors.primary),
-                    onPressed: _openSearchScanner,
-                    tooltip: "Barcode Scan",
+                  suffixIcon: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_searchQuery.isNotEmpty)
+                        IconButton(
+                          icon: const Icon(Icons.clear, color: Colors.grey),
+                          onPressed: () {
+                            setState(() {
+                              _searchController.clear();
+                              _searchQuery = "";
+                              _currentPage = 1;
+                            });
+                          },
+                        ),
+                      IconButton(
+                        icon: const Icon(Icons.qr_code_scanner, color: AppColors.primary),
+                        onPressed: _openSearchScanner,
+                        tooltip: "Barcode Scan",
+                      ),
+                    ],
                   ),
                   filled: true,
                   fillColor: Colors.white,

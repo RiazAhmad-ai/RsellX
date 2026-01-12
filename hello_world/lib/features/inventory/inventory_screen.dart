@@ -997,6 +997,18 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         decoration: InputDecoration(
                           hintText: "Search by Name, Code or Category...",
                           prefixIcon: const Icon(Icons.search),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, color: Colors.grey),
+                                  onPressed: () {
+                                    setState(() {
+                                      _searchController.clear();
+                                      _searchQuery = "";
+                                    });
+                                    _loadInitialData();
+                                  },
+                                )
+                              : null,
                           filled: true,
                           fillColor: Colors.grey[100],
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
