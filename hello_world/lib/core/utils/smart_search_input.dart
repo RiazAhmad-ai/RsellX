@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import '../../features/cart/cart_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/utils/image_path_helper.dart';
 
 /// RESULT WRAPPER FOR MULTIPLE ACTIONS
 class SearchActionResult {
@@ -268,7 +269,7 @@ Widget _buildSearchItem(BuildContext context, InventoryItem item, bool isBestMat
               children: [
                 GestureDetector(
                   onTap: () {
-                    if (item.imagePath != null && File(item.imagePath!).existsSync()) {
+                    if (item.imagePath != null && ImagePathHelper.exists(item.imagePath!)) {
                       _showImagePreview(context, item.imagePath!, item.name);
                     }
                   },
@@ -281,8 +282,8 @@ Widget _buildSearchItem(BuildContext context, InventoryItem item, bool isBestMat
                         color: Colors.grey[100],
                         border: Border.all(color: Colors.grey[200]!),
                       ),
-                      child: item.imagePath != null && File(item.imagePath!).existsSync()
-                        ? Image.file(File(item.imagePath!), fit: BoxFit.cover)
+                      child: item.imagePath != null && ImagePathHelper.exists(item.imagePath!)
+                        ? Image.file(ImagePathHelper.getFile(item.imagePath!), fit: BoxFit.cover)
                         : const Icon(Icons.inventory_2_rounded, color: Colors.grey, size: 24),
                     ),
                   ),
@@ -574,11 +575,17 @@ void _showImagePreview(BuildContext context, String imagePath, String title) {
               ),
             ],
           ),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(30),
-            child: Image.file(
-              File(imagePath),
-              fit: BoxFit.contain,
+          Flexible(
+            child: InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(30),
+                child: Image.file(
+                  ImagePathHelper.getFile(imagePath),
+                  fit: BoxFit.contain,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 16),

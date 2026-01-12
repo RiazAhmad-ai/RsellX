@@ -256,12 +256,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     String? editImagePath = item.imagePath;
     final imagePicker = ImagePicker();
 
-    Future<String> saveImageToAppDir(String tempPath) async {
-      final appDir = await getApplicationDocumentsDirectory();
-      final fileName = 'product_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final savedImage = await File(tempPath).copy('${appDir.path}/$fileName');
-      return savedImage.path;
-    }
+
 
     void _showBarcodeGeneratedMessage(String code) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -363,10 +358,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               final XFile? image = await imagePicker.pickImage(
                                 source: ImageSource.camera,
                                 imageQuality: 70,
-                                maxWidth: 800,
                               );
                               if (image != null) {
-                                final savedPath = await saveImageToAppDir(image.path);
+                                final savedPath = await ImagePathHelper.saveImage(image.path);
                                 setModalState(() {
                                   editImagePath = savedPath;
                                 });
@@ -393,10 +387,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               final XFile? image = await imagePicker.pickImage(
                                 source: ImageSource.gallery,
                                 imageQuality: 70,
-                                maxWidth: 800,
                               );
                               if (image != null) {
-                                final savedPath = await saveImageToAppDir(image.path);
+                                final savedPath = await ImagePathHelper.saveImage(image.path);
                                 setModalState(() {
                                   editImagePath = savedPath;
                                 });
@@ -512,16 +505,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                     offset: const Offset(0, 4),
                                   ),
                                 ],
-                                image: editImagePath != null && File(editImagePath!).existsSync()
+                                image: editImagePath != null && ImagePathHelper.exists(editImagePath!)
                                     ? DecorationImage(
-                                        image: FileImage(File(editImagePath!)),
+                                        image: FileImage(ImagePathHelper.getFile(editImagePath!)),
                                         fit: BoxFit.cover,
                                       )
                                     : null,
                               ),
                               child: Stack(
                                 children: [
-                                  if (editImagePath == null || !File(editImagePath!).existsSync())
+                                  if (editImagePath == null || !ImagePathHelper.exists(editImagePath!))
                                     const Center(
                                       child: Icon(Icons.inventory_2, color: Colors.white, size: 28),
                                     ),

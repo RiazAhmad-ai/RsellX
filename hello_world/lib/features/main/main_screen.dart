@@ -13,6 +13,7 @@ import '../inventory/sell_item_sheet.dart';
 import '../../shared/widgets/full_scanner_screen.dart';
 import '../../core/utils/manual_text_input.dart';
 import '../../core/utils/smart_search_input.dart';
+import '../../core/utils/image_path_helper.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../cart/cart_screen.dart';
@@ -163,11 +164,17 @@ class _MainScreenState extends State<MainScreen> {
                 ),
               ],
             ),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(30),
-              child: Image.file(
-                File(imagePath),
-                fit: BoxFit.contain,
+            Flexible(
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.0,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(30),
+                  child: Image.file(
+                    ImagePathHelper.getFile(imagePath),
+                    fit: BoxFit.contain,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 16),
