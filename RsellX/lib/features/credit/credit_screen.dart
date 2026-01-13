@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/credit_provider.dart';
+import '../../providers/settings_provider.dart';
 import '../../data/models/credit_model.dart';
 import '../../shared/utils/formatting.dart';
 import 'credit_details_screen.dart';
@@ -37,6 +38,8 @@ class _CreditScreenState extends State<CreditScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     final creditProvider = context.watch<CreditProvider>();
+    final settingsProvider = context.watch<SettingsProvider>();
+    final isVisible = settingsProvider.isBalanceVisible;
     
     return Scaffold(
       backgroundColor: Colors.white,
@@ -54,9 +57,9 @@ class _CreditScreenState extends State<CreditScreen> with SingleTickerProviderSt
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                Expanded(child: _buildSmartCard("To Receive", creditProvider.totalToReceive, Colors.black, Icons.arrow_downward)),
+                Expanded(child: _buildSmartCard("To Receive", creditProvider.totalToReceive, Colors.black, Icons.arrow_downward, isVisible)),
                 const SizedBox(width: 12),
-                Expanded(child: _buildSmartCard("To Pay", creditProvider.totalToPay, const Color(0xFFD32F2F), Icons.arrow_upward)),
+                Expanded(child: _buildSmartCard("To Pay", creditProvider.totalToPay, const Color(0xFFD32F2F), Icons.arrow_upward, isVisible)),
               ],
             ),
           ),
@@ -117,8 +120,8 @@ class _CreditScreenState extends State<CreditScreen> with SingleTickerProviderSt
             child: TabBarView(
               controller: _tabController,
               children: [
-                CreditList(type: 'Lend', query: _searchQuery), 
-                CreditList(type: 'Borrow', query: _searchQuery), 
+                CreditList(type: 'Lend', query: _searchQuery, isVisible: isVisible), 
+                CreditList(type: 'Borrow', query: _searchQuery, isVisible: isVisible), 
               ],
             ),
           ),
@@ -134,7 +137,7 @@ class _CreditScreenState extends State<CreditScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildSmartCard(String title, double amount, Color color, IconData icon) {
+  Widget _buildSmartCard(String title, double amount, Color color, IconData icon, bool isVisible) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -160,7 +163,7 @@ class _CreditScreenState extends State<CreditScreen> with SingleTickerProviderSt
           ),
           const SizedBox(height: 12),
           Text(
-            "Rs ${Formatter.formatCurrency(amount)}", 
+            isVisible ? "Rs ${Formatter.formatCurrency(amount)}" : "Rs •••••••", 
             style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
           ),
         ],
@@ -176,7 +179,8 @@ class _CreditScreenState extends State<CreditScreen> with SingleTickerProviderSt
 class CreditList extends StatelessWidget {
   final String type; 
   final String query;
-  const CreditList({super.key, required this.type, required this.query});
+  final bool isVisible;
+  const CreditList({super.key, required this.type, required this.query, required this.isVisible});
 
   @override
   Widget build(BuildContext context) {
@@ -249,7 +253,7 @@ class CreditList extends StatelessWidget {
                      children: [
                        Text("Total: ${item.amount.toInt()}", style: TextStyle(fontSize: 11, color: Colors.grey[500])),
                        Container(width: 1, height: 10, color: Colors.grey[300]),
-                       Text("Paid: ${item.paidAmount.toInt()}", style: const TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold)),
+                       Text("Paid: ${isVisible ? item.paidAmount.toInt() : '••••'}", style: const TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold)),
                        Container(width: 1, height: 10, color: Colors.grey[300]),
                        Text("Start: ${DateFormat('d/M/yy').format(item.date)}", style: TextStyle(fontSize: 10, color: Colors.grey[400])),
                        
@@ -284,7 +288,7 @@ class CreditList extends StatelessWidget {
                    )
                 else ...[
                   Text(
-                    "Rs ${item.balance.toStringAsFixed(0)}",
+                    isVisible ? "Rs ${item.balance.toStringAsFixed(0)}" : "Rs ••••",
                     style: TextStyle(
                       fontSize: 18, 
                       fontWeight: FontWeight.bold,

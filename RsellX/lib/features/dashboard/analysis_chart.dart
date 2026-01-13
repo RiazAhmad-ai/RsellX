@@ -10,10 +10,13 @@ class AnalysisChart extends StatefulWidget {
   final String title;
   final Map<String, dynamic> chartData;
 
+  final bool isBalanceVisible;
+
   const AnalysisChart({
     super.key,
     required this.title,
     required this.chartData, 
+    this.isBalanceVisible = true,
   });
 
   @override
@@ -34,12 +37,12 @@ class _AnalysisChartState extends State<AnalysisChart> {
     if (maxValue < 1.0) maxValue = 1.0; // Ensure positive divisor and handle losses
 
     double totalSum = rawValues.fold(0, (p, c) => p + c);
-    String totalAmountStr = "Rs ${Formatter.formatCurrency(totalSum)}";
+    String totalAmountStr = widget.isBalanceVisible ? "Rs ${Formatter.formatCurrency(totalSum)}" : "Rs •••••••";
 
     int? activeIndex = touchedIndex ?? _selectedIndex;
 
     String displayAmount = (activeIndex != null && activeIndex < rawValues.length)
-        ? "Rs ${Formatter.formatCurrency(rawValues[activeIndex])}"
+        ? (widget.isBalanceVisible ? "Rs ${Formatter.formatCurrency(rawValues[activeIndex])}" : "Rs •••••••")
         : totalAmountStr;
 
     String displayLabel = (activeIndex != null && activeIndex < labels.length)
@@ -251,7 +254,7 @@ class _AnalysisChartState extends State<AnalysisChart> {
           Text(label, style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500)),
           const Spacer(),
           Text(
-            "Rs ${Formatter.formatCurrency(val)}",
+            widget.isBalanceVisible ? "Rs ${Formatter.formatCurrency(val)}" : "Rs •••••••",
             style: TextStyle(
               color: color,
               fontWeight: FontWeight.w900,

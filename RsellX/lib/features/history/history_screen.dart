@@ -876,6 +876,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             children: [
                               _buildSalesStat(
                                 salesProvider,
+                                settingsProvider: settingsProvider,
                                 label: _formatDate(_selectedDate) == _formatDate(DateTime.now()) ? "TODAY" : "SELECTED",
                                 subtitle: DateFormat('MMM d, yyyy').format(_selectedDate),
                                 sales: salesProvider.getTotalSalesForDate(_selectedDate),
@@ -887,6 +888,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               const SizedBox(width: 10),
                               _buildSalesStat(
                                 salesProvider,
+                                settingsProvider: settingsProvider,
                                 label: "WEEKLY",
                                 subtitle: "${DateFormat('MMM d').format(_selectedDate.subtract(Duration(days: _selectedDate.weekday - 1)))} - ${DateFormat('MMM d').format(_selectedDate.subtract(Duration(days: _selectedDate.weekday - 1)).add(const Duration(days: 6)))}",
                                 sales: salesProvider.getTotalSalesForWeek(_selectedDate),
@@ -902,6 +904,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             children: [
                               _buildSalesStat(
                                 salesProvider,
+                                settingsProvider: settingsProvider,
                                 label: "MONTHLY",
                                 subtitle: DateFormat('MMMM yyyy').format(_selectedDate),
                                 sales: salesProvider.getTotalSalesForMonth(_selectedDate),
@@ -913,6 +916,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               const SizedBox(width: 10),
                               _buildSalesStat(
                                 salesProvider,
+                                settingsProvider: settingsProvider,
                                 label: "ANNUAL",
                                 subtitle: DateFormat('yyyy').format(_selectedDate),
                                 sales: salesProvider.getTotalSalesForYear(_selectedDate),
@@ -998,6 +1002,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Widget _buildSalesStat(
     SalesProvider provider, {
+    required SettingsProvider settingsProvider,
     required String label,
     required String subtitle,
     required double sales,
@@ -1051,7 +1056,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               const SizedBox(height: 6),
               FittedBox(
                 child: Text(
-                  "Rs ${Formatter.formatCurrency(sales)}",
+                  settingsProvider.isBalanceVisible ? "Rs ${Formatter.formatCurrency(sales)}" : "Rs •••••••",
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 13,
@@ -1061,7 +1066,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
               FittedBox(
                 child: Text(
-                  "Profit: Rs ${Formatter.formatCurrency(profit)}",
+                  settingsProvider.isBalanceVisible ? "Profit: Rs ${Formatter.formatCurrency(profit)}" : "Profit: Rs •••••",
                   style: TextStyle(
                     color: Colors.greenAccent.shade100,
                     fontSize: 9,
@@ -1077,6 +1082,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   void _showSalesDetailedReport(BuildContext context, String title, List<SaleRecord> items, double totalSales, double totalProfit, Color themeColor) {
+    final isVisible = context.read<SettingsProvider>().isBalanceVisible;
     // Group by product name
     Map<String, Map<String, dynamic>> productSummary = {};
     for (var sale in items) {
@@ -1122,11 +1128,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                "Total Sales: Rs ${Formatter.formatCurrency(totalSales)}",
+                "Total Sales: ${isVisible ? 'Rs ${Formatter.formatCurrency(totalSales)}' : 'Rs •••••••'}",
                 style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
               ),
               Text(
-                "Total Profit: Rs ${Formatter.formatCurrency(totalProfit)}",
+                "Total Profit: ${isVisible ? 'Rs ${Formatter.formatCurrency(totalProfit)}' : 'Rs •••••'}",
                 style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 24),
@@ -1163,14 +1169,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  "Sales: Rs ${Formatter.formatCurrency(entry.value['sales'])}",
-                                  style: const TextStyle(fontSize: 12, color: Colors.black87),
-                                ),
-                                Text(
-                                  "Profit: Rs ${Formatter.formatCurrency(entry.value['profit'])}",
-                                  style: TextStyle(fontSize: 12, color: Colors.green.shade700, fontWeight: FontWeight.w600),
-                                ),
+                                  Text(
+                                    "Sales: ${isVisible ? 'Rs ${Formatter.formatCurrency(entry.value['sales'])}' : 'Rs •••••'}",
+                                    style: const TextStyle(fontSize: 12, color: Colors.black87),
+                                  ),
+                                  Text(
+                                    "Profit: ${isVisible ? 'Rs ${Formatter.formatCurrency(entry.value['profit'])}' : 'Rs •••••'}",
+                                    style: TextStyle(fontSize: 12, color: Colors.green.shade700, fontWeight: FontWeight.w600),
+                                  ),
                               ],
                             ),
                             const Divider(height: 16),
@@ -1223,6 +1229,7 @@ class _BillCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isVisible = context.watch<SettingsProvider>().isBalanceVisible;
     double billTotal = 0;
     double billProfit = 0;
     int totalQty = 0;
@@ -1307,7 +1314,7 @@ class _BillCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  "Rs ${Formatter.formatCurrency(billTotal)}",
+                  isVisible ? "Rs ${Formatter.formatCurrency(billTotal)}" : "Rs •••••••",
                   style: AppTextStyles.bodyLarge.copyWith(
                     fontWeight: FontWeight.w900,
                     color: allRefunded ? AppColors.error : AppColors.primary,
@@ -1315,7 +1322,7 @@ class _BillCard extends StatelessWidget {
                 ),
                 if (!allRefunded)
                   Text(
-                    billProfit >= 0 ? "+Rs ${Formatter.formatCurrency(billProfit)}" : "-Rs ${Formatter.formatCurrency(billProfit.abs())}",
+                    isVisible ? (billProfit >= 0 ? "+Rs ${Formatter.formatCurrency(billProfit)}" : "-Rs ${Formatter.formatCurrency(billProfit.abs())}") : (billProfit >= 0 ? "+Rs ••••" : "-Rs ••••"),
                     style: AppTextStyles.label.copyWith(color: billProfit >= 0 ? AppColors.success : AppColors.error, fontSize: 10),
                   ),
               ],
@@ -1363,6 +1370,7 @@ class _IndividualItemRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isVisible = context.watch<SettingsProvider>().isBalanceVisible;
     bool isRefunded = item.status == "Refunded";
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1400,7 +1408,7 @@ class _IndividualItemRow extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      "${item.qty} x Rs ${Formatter.formatCurrency(item.price)}",
+                      "${item.qty} x ${isVisible ? 'Rs ${Formatter.formatCurrency(item.price)}' : 'Rs ••••'}",
                       style: TextStyle(color: Colors.grey[600], fontSize: 11),
                     ),
                   ],
@@ -1410,7 +1418,7 @@ class _IndividualItemRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    "Rs ${Formatter.formatCurrency(item.price * item.qty)}",
+                    isVisible ? "Rs ${Formatter.formatCurrency(item.price * item.qty)}" : "Rs ••••",
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: isRefunded ? Colors.red : Colors.black,
@@ -1418,7 +1426,7 @@ class _IndividualItemRow extends StatelessWidget {
                   ),
                   if (!isRefunded)
                     Text(
-                      "+Rs ${Formatter.formatCurrency(item.profit)}",
+                      isVisible ? "+Rs ${Formatter.formatCurrency(item.profit)}" : "+Rs ••••",
                       style: TextStyle(color: AppColors.success, fontSize: 10),
                     ),
                 ],

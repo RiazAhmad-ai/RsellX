@@ -38,6 +38,7 @@ class SettingsProvider extends ChangeNotifier {
   String get address => _settingsBox.get('address', defaultValue: "[Tap Settings to add your Address]");
   String? get logoPath => _settingsBox.get('logoPath');
   String get adminPasscode => _settingsBox.get('adminPasscode', defaultValue: "1234");
+  bool get isBalanceVisible => _settingsBox.get('isBalanceVisible', defaultValue: false);
 
   Future<void> updateProfile(String name, String shop, String phone, String address, {String? logo}) async {
     await _settingsBox.put('ownerName', name);
@@ -51,5 +52,9 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> updatePasscode(String newPasscode) async {
     await _settingsBox.put('adminPasscode', newPasscode);
     // Stream subscription will trigger notifyListeners
+  }
+
+  Future<void> toggleBalanceVisibility() async {
+    await _settingsBox.put('isBalanceVisible', !isBalanceVisible);
   }
 }

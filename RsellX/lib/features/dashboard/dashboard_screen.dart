@@ -182,6 +182,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 OverviewCard(
                   title: "TOTAL STOCK VALUE",
                   amount: "Rs ${Formatter.formatCurrency(totalStockValue)}",
+                  isBalanceVisible: settingsProvider.isBalanceVisible,
+                  onToggleBalance: () => settingsProvider.toggleBalanceVisibility(),
                   damageAmount: Formatter.formatCurrency(inventoryProvider.getTotalDamageLoss()),
                   footerText: "Exact Total: Rs ${Formatter.formatCurrency(totalStockValue - inventoryProvider.getTotalDamageLoss())}",
                   icon: Icons.inventory_2,
@@ -217,6 +219,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   key: ValueKey("chart_${_filter}_${salesProvider.historyItems.length}"),
                   title: "$_filter Overview",
                   chartData: analyticsData,
+                  isBalanceVisible: settingsProvider.isBalanceVisible,
                 ),
                 const SizedBox(height: 20),
                 TopProductsChart(data: salesProvider.getTopSellingProducts()),

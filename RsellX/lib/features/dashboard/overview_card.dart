@@ -12,10 +12,15 @@ class OverviewCard extends StatefulWidget {
   final List<Color>? gradientColors;
   final VoidCallback? onTap;
 
+  final bool isBalanceVisible;
+  final VoidCallback onToggleBalance;
+
   const OverviewCard({
     super.key,
     required this.title,
     required this.amount,
+    required this.isBalanceVisible,
+    required this.onToggleBalance,
     this.damageAmount,
     this.footerText,
     this.icon = Icons.inventory_2_outlined,
@@ -28,8 +33,6 @@ class OverviewCard extends StatefulWidget {
 }
 
 class _OverviewCardState extends State<OverviewCard> {
-  bool _isBalanceVisible = true;
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -87,9 +90,9 @@ class _OverviewCardState extends State<OverviewCard> {
                           ),
                         ),
                         IconButton(
-                          onPressed: () => setState(() => _isBalanceVisible = !_isBalanceVisible),
+                          onPressed: widget.onToggleBalance,
                           icon: Icon(
-                            _isBalanceVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                            widget.isBalanceVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
                             color: Colors.white70,
                             size: 20,
                           ),
@@ -117,8 +120,8 @@ class _OverviewCardState extends State<OverviewCard> {
                               AnimatedSwitcher(
                                 duration: const Duration(milliseconds: 300),
                                 child: Text(
-                                  _isBalanceVisible ? widget.amount : "Rs •••••••",
-                                  key: ValueKey<bool>(_isBalanceVisible),
+                                  widget.isBalanceVisible ? widget.amount : "Rs •••••••",
+                                  key: ValueKey<bool>(widget.isBalanceVisible),
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 34,
@@ -132,7 +135,7 @@ class _OverviewCardState extends State<OverviewCard> {
                             ],
                           ),
                         ),
-                        if (widget.damageAmount != null && _isBalanceVisible)
+                        if (widget.damageAmount != null && widget.isBalanceVisible)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
@@ -179,7 +182,7 @@ class _OverviewCardState extends State<OverviewCard> {
                           ),
                           const SizedBox(width: 10),
                           Text(
-                            _isBalanceVisible ? widget.footerText! : "Net Balance: Rs ••••••",
+                            widget.isBalanceVisible ? widget.footerText! : "Net Balance: Rs ••••••",
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.6),
                               fontSize: 13,

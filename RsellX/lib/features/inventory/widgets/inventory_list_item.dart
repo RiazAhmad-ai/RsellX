@@ -4,6 +4,9 @@ import 'package:rsellx/data/models/inventory_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/image_path_helper.dart';
 
+import 'package:provider/provider.dart';
+import '../../../providers/settings_provider.dart';
+
 class InventoryListItem extends StatelessWidget {
   final InventoryItem item;
   final VoidCallback onTap;
@@ -108,9 +111,14 @@ class InventoryListItem extends StatelessWidget {
                     Row(
                       children: [
                         Text("Rs ", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey[600])),
-                        Text(
-                          item.price.toStringAsFixed(0), 
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.success),
+                        Builder(
+                          builder: (context) {
+                            final isVisible = context.watch<SettingsProvider>().isBalanceVisible;
+                            return Text(
+                              isVisible ? item.price.toStringAsFixed(0) : "••••", 
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.success),
+                            );
+                          }
                         ),
                       ],
                     ),

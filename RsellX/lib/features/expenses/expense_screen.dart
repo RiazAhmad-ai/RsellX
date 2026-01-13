@@ -279,6 +279,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
   Widget build(BuildContext context) {
     final expenseProvider = context.watch<ExpenseProvider>();
     final settingsProvider = context.watch<SettingsProvider>();
+    final isVisible = settingsProvider.isBalanceVisible;
     
     // 1. Get Data for SELECTED DATE ONLY
     final expensesForDate = expenseProvider.getExpensesForDate(_selectedDate);
@@ -420,7 +421,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                                 amount: expenseProvider.getTotalExpensesForDate(_selectedDate),
                                 icon: Icons.bolt_rounded,
                                 color: Colors.blueAccent,
-                                onLongPress: () => _showDetailedReport(context, "DAILY REPORT", expenseProvider.getExpensesForDate(_selectedDate), expenseProvider.getTotalExpensesForDate(_selectedDate), Colors.blue),
+                                onLongPress: () => _showDetailedReport(context, "DAILY REPORT", expenseProvider.getExpensesForDate(_selectedDate), expenseProvider.getTotalExpensesForDate(_selectedDate), Colors.blue, isVisible),
                               ),
                               const SizedBox(width: 12),
                               _buildGlassStat(
@@ -429,7 +430,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                                 amount: expenseProvider.getTotalExpensesForWeek(_selectedDate),
                                 icon: Icons.auto_graph_rounded,
                                 color: Colors.orangeAccent,
-                                onLongPress: () => _showDetailedReport(context, "WEEKLY REPORT", expenseProvider.getExpensesForWeek(_selectedDate), expenseProvider.getTotalExpensesForWeek(_selectedDate), Colors.orange),
+                                onLongPress: () => _showDetailedReport(context, "WEEKLY REPORT", expenseProvider.getExpensesForWeek(_selectedDate), expenseProvider.getTotalExpensesForWeek(_selectedDate), Colors.orange, isVisible),
                               ),
                             ],
                           ),
@@ -442,7 +443,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                                 amount: expenseProvider.getTotalExpensesForMonth(_selectedDate),
                                 icon: Icons.calendar_month_rounded,
                                 color: Colors.greenAccent,
-                                onLongPress: () => _showDetailedReport(context, "MONTHLY REPORT", expenseProvider.getExpensesForMonth(_selectedDate), expenseProvider.getTotalExpensesForMonth(_selectedDate), Colors.green),
+                                onLongPress: () => _showDetailedReport(context, "MONTHLY REPORT", expenseProvider.getExpensesForMonth(_selectedDate), expenseProvider.getTotalExpensesForMonth(_selectedDate), Colors.green, isVisible),
                               ),
                               const SizedBox(width: 12),
                               _buildGlassStat(
@@ -451,7 +452,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                                 amount: expenseProvider.getTotalExpensesForYear(_selectedDate),
                                 icon: Icons.account_balance_wallet_rounded,
                                 color: Colors.purpleAccent,
-                                onLongPress: () => _showDetailedReport(context, "ANNUAL REPORT", expenseProvider.getExpensesForYear(_selectedDate), expenseProvider.getTotalExpensesForYear(_selectedDate), Colors.purple),
+                                onLongPress: () => _showDetailedReport(context, "ANNUAL REPORT", expenseProvider.getExpensesForYear(_selectedDate), expenseProvider.getTotalExpensesForYear(_selectedDate), Colors.purple, isVisible),
                               ),
                             ],
                           ),
@@ -524,7 +525,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
             // LIST (Single List based on Date)
             if (filteredList.isNotEmpty) ...[
               _buildDateHeader(isToday ? "TODAY" : displayDate),
-              ...filteredList.map((item) => _buildSwipeableItem(item)),
+              ...filteredList.map((item) => _buildSwipeableItem(item, isVisible)),
               const SizedBox(height: 80),
             ] else
               Padding(
@@ -568,7 +569,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
     );
   }
 
-  Widget _buildSwipeableItem(ExpenseItem item) {
+  Widget _buildSwipeableItem(ExpenseItem item, bool isVisible) {
     return Dismissible(
       key: Key(item.id),
       direction: DismissDirection.endToStart,
@@ -646,7 +647,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                 ),
               ),
               Text(
-                "Rs ${Formatter.formatCurrency(item.amount)}",
+                "Rs ${isVisible ? Formatter.formatCurrency(item.amount) : '••••'}",
                 style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w900, color: AppColors.error),
               ),
             ],
@@ -690,6 +691,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
     required Color color,
     VoidCallback? onLongPress,
   }) {
+    final isVisible = Provider.of<SettingsProvider>(context, listen: false).isBalanceVisible;
     return Expanded(
       child: GestureDetector(
         onLongPress: onLongPress,
@@ -735,7 +737,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
               const SizedBox(height: 4),
               FittedBox(
                 child: Text(
-                  "Rs ${Formatter.formatCurrency(amount)}",
+                  isVisible ? "Rs ${Formatter.formatCurrency(amount)}" : "Rs •••••",
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 15,
@@ -751,7 +753,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
   }
 
   // === UNIVERSAL DETAILED REPORT DIALOG ===
-  void _showDetailedReport(BuildContext context, String title, List<ExpenseItem> items, double total, Color themeColor) {
+  void _showDetailedReport(BuildContext context, String title, List<ExpenseItem> items, double total, Color themeColor, bool isVisible) {
     // Group by category for the report
     Map<String, double> categoryTotals = {};
     for (var e in items) {
@@ -788,7 +790,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                "Total Spent: Rs ${Formatter.formatCurrency(total)}",
+                "Total Spent: ${isVisible ? 'Rs ${Formatter.formatCurrency(total)}' : 'Rs •••••••'}",
                 style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 24),
