@@ -2,7 +2,7 @@
 
 # 📦 RsellX
 
-<img src="assets/readme_images/banner.png" alt="RsellX Banner" width="100%"/>
+<img src="banner.png" alt="RsellX Banner" width="100%"/>
 
 ### 🏪 **Professional Barcode Inventory Management System**
 
@@ -20,7 +20,7 @@
 ## 📱 App Preview
 
 <div align="center">
-<img src="assets/readme_images/mockups.png" alt="App Mockups" width="90%"/>
+<img src="mockups.png" alt="App Mockups" width="90%"/>
 </div>
 
 ---
@@ -28,7 +28,7 @@
 ## ✨ Features
 
 <div align="center">
-<img src="assets/readme_images/features.png" alt="Features" width="80%"/>
+<img src="features.png" alt="Features" width="80%"/>
 </div>
 
 ### 🔍 **Smart Barcode Scanning**
