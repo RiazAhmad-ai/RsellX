@@ -151,7 +151,7 @@ Future<SearchActionResult?> showSmartSearchInput(
                             children: [
                                Icon(Icons.swipe_right_rounded, color: Colors.blue, size: 10),
                                SizedBox(width: 4),
-                               Text("SWIPE TO ADD", style: TextStyle(color: Colors.blue, fontSize: 8, fontWeight: FontWeight.bold)),
+                               Text("SWIPE TO SELL", style: TextStyle(color: Colors.blue, fontSize: 8, fontWeight: FontWeight.bold)),
                             ],
                           ),
                         ),
@@ -217,7 +217,7 @@ Widget _buildInitialState() {
           children: [
             Icon(Icons.lightbulb_outline, color: Colors.amber, size: 16),
             SizedBox(width: 8),
-            Text("Tip: Swipe right on a product to Cart", style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 11)),
+            Text("Tip: Swipe right to Sell", style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 11)),
           ],
         ),
       ),
@@ -248,8 +248,63 @@ Widget _buildSearchItem(BuildContext context, InventoryItem item, bool isBestMat
       ),
     ),
     confirmDismiss: (direction) async {
-      // Quick add without closing modal
-      _quickAddToCart(context, item, setModalState);
+      // Open sell sheet to allow entering selling price
+      if (item.stock <= 0) {
+        HapticFeedback.heavyImpact();
+        final audioPlayer = AudioPlayer();
+        audioPlayer.play(AssetSource('scanner_beep.mp3'));
+        
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text("${item.name} is out of stock!")),
+              ],
+            ),
+            duration: const Duration(milliseconds: 600),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+        return false;
+      }
+      
+      // Play beep sound
+      final audioPlayer = AudioPlayer();
+      audioPlayer.play(AssetSource('scanner_beep.mp3'));
+      
+      // Open sell sheet to enter selling price
+      final result = await showModalBottomSheet<String>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        builder: (context) => SellItemSheet(item: item),
+      );
+
+      if (result == "VIEW_CART") {
+        if (context.mounted) {
+          Navigator.pop(context); // Close search modal
+          await Future.delayed(const Duration(milliseconds: 150));
+          Navigator.push(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) => const CartScreen(),
+              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+              transitionDuration: const Duration(milliseconds: 300),
+            ),
+          );
+        }
+      }
       return false; // Don't dismiss the card
     },
     child: Card(

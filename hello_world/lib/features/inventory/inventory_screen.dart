@@ -1188,50 +1188,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
       return;
     }
 
-    final salesProvider = context.read<SalesProvider>();
-    
-    // Create new record for the provider to process
-    final cartItem = SaleRecord(
-      id: "sale_${item.id}_${DateTime.now().millisecondsSinceEpoch}",
-      itemId: item.id,
-      name: item.name,
-      price: item.price,
-      actualPrice: item.price,
-      qty: 1,
-      profit: 0.0,
-      date: DateTime.now(),
-      status: "Cart",
-      category: item.category,
-      subCategory: item.subCategory,
-      size: item.size,
-      weight: item.weight,
-      imagePath: item.imagePath,
-    );
-
-    // Manager will handle merging if already in cart and stock deduction
-    salesProvider.addToCart(cartItem);
-    
-    HapticFeedback.lightImpact();
-    if (!mounted) return;
-    
-    // Play success beep
-    _audioPlayer.play(AssetSource('scanner_beep.mp3'));
-    
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(child: Text("${item.name} added to cart!")),
-          ],
-        ),
-        backgroundColor: AppColors.success,
-        duration: const Duration(milliseconds: 600),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    // Open sell sheet to let user enter selling price
+    _showSellSheet(item);
   }
 
   void _showSellSheet(InventoryItem item) async {

@@ -15,6 +15,7 @@ import '../../shared/widgets/full_scanner_screen.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:rsellx/core/constants/app_constants.dart';
 import '../../core/utils/debouncer.dart';
+import '../../core/utils/image_path_helper.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -189,7 +190,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.file(
-                    File(imagePath),
+                    ImagePathHelper.getFile(imagePath),
                     fit: BoxFit.contain,
                   ),
                 ),
@@ -1250,7 +1251,7 @@ class _BillCard extends StatelessWidget {
         child: Theme(
           data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
           child: ExpansionTile(
-            leading: items.length == 1 && items.first.imagePath != null && File(items.first.imagePath!).existsSync()
+            leading: items.length == 1 && items.first.imagePath != null && ImagePathHelper.exists(items.first.imagePath!)
                 ? GestureDetector(
                     onTap: () => onImageTap(items.first.imagePath!, items.first.name),
                     child: Container(
@@ -1260,7 +1261,7 @@ class _BillCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: Colors.grey[200]!),
                         image: DecorationImage(
-                          image: FileImage(File(items.first.imagePath!)),
+                          image: FileImage(ImagePathHelper.getFile(items.first.imagePath!)),
                           fit: BoxFit.cover,
                         ),
                       ),
@@ -1369,7 +1370,7 @@ class _IndividualItemRow extends StatelessWidget {
         children: [
           Row(
             children: [
-              if (item.imagePath != null && File(item.imagePath!).existsSync())
+              if (item.imagePath != null && ImagePathHelper.exists(item.imagePath!))
                 Padding(
                   padding: const EdgeInsets.only(right: 12),
                   child: GestureDetector(
@@ -1377,7 +1378,7 @@ class _IndividualItemRow extends StatelessWidget {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Image.file(
-                        File(item.imagePath!),
+                        ImagePathHelper.getFile(item.imagePath!),
                         width: 40,
                         height: 40,
                         fit: BoxFit.cover,
