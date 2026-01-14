@@ -26,8 +26,8 @@ class CreditRecordAdapter extends TypeAdapter<CreditRecord> {
       isSettled: fields[6] as bool,
       description: fields[7] as String?,
       dueDate: fields[8] as DateTime?,
-      paidAmount: fields[9] == null ? 0.0 : fields[9] as double,
-      logs: (fields[10] as List?)?.cast<String>() ?? [],
+      paidAmount: fields[9] as double,
+      logs: (fields[10] as List).cast<String>(),
     );
   }
 

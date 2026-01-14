@@ -28,6 +28,12 @@ class _AddItemSheetState extends State<AddItemSheet> {
   final TextEditingController _descController = TextEditingController();
   final TextEditingController _barcodeController = TextEditingController();
   final TextEditingController _thresholdController = TextEditingController(text: "5");
+  final TextEditingController _colorController = TextEditingController();
+  final TextEditingController _brandController = TextEditingController();
+  final TextEditingController _itemTypeController = TextEditingController();
+  
+  String _selectedUnit = "Piece";
+  final List<String> _unitOptions = ["Piece", "Kg", "Gram", "Liter", "Meter", "Box", "Pack", "Dozen", "Pair", "Set"];
 
   bool _isSaving = false;
   File? _selectedImage;
@@ -466,6 +472,10 @@ class _AddItemSheetState extends State<AddItemSheet> {
         size: _sizeController.text.trim().isEmpty ? "N/A" : _sizeController.text.trim(),
         weight: _weightController.text.trim().isEmpty ? "N/A" : _weightController.text.trim(),
         imagePath: _selectedImage != null ? ImagePathHelper.toRelativePath(_selectedImage!.path) : null,
+        color: _colorController.text.trim().isEmpty ? "N/A" : _colorController.text.trim(),
+        brand: _brandController.text.trim().isEmpty ? "N/A" : _brandController.text.trim(),
+        itemType: _itemTypeController.text.trim().isEmpty ? "N/A" : _itemTypeController.text.trim(),
+        unit: _selectedUnit,
       );
 
       context.read<InventoryProvider>().addInventoryItem(newItem);
@@ -747,6 +757,100 @@ class _AddItemSheetState extends State<AddItemSheet> {
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                               filled: true,
                               fillColor: Colors.grey[100],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // === NEW SECTION: Color and Brand ===
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _colorController,
+                            decoration: InputDecoration(
+                              hintText: "Color (رنگ)",
+                              prefixIcon: const Icon(Icons.color_lens_outlined),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                              filled: true,
+                              fillColor: Colors.grey[100],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: _brandController,
+                            decoration: InputDecoration(
+                              hintText: "Brand (برانڈ)",
+                              prefixIcon: const Icon(Icons.branding_watermark_outlined),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                              filled: true,
+                              fillColor: Colors.grey[100],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // === NEW SECTION: Item Type and Units ===
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _itemTypeController,
+                            decoration: InputDecoration(
+                              hintText: "Item Type (قسم)",
+                              prefixIcon: const Icon(Icons.style_outlined),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                              filled: true,
+                              fillColor: Colors.grey[100],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: _selectedUnit,
+                                icon: const Icon(Icons.arrow_drop_down),
+                                isExpanded: true,
+                                hint: Row(
+                                  children: [
+                                    Icon(Icons.straighten, color: Colors.grey[600]),
+                                    const SizedBox(width: 12),
+                                    const Text("Unit"),
+                                  ],
+                                ),
+                                items: _unitOptions.map((String unit) {
+                                  return DropdownMenuItem<String>(
+                                    value: unit,
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.straighten, color: Colors.grey[600]),
+                                        const SizedBox(width: 12),
+                                        Text(unit),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (String? newValue) {
+                                  setState(() {
+                                    _selectedUnit = newValue ?? "Piece";
+                                  });
+                                },
+                              ),
                             ),
                           ),
                         ),

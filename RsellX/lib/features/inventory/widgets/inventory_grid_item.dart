@@ -185,6 +185,9 @@ class InventoryGridItem extends StatelessWidget {
                       _Tag(label: item.category, color: Colors.purple, icon: Icons.category, onTap: onTagTap == null ? null : () => onTagTap!(item.category, Icons.category)),
                       if (item.subCategory != "N/A")
                         _Tag(label: item.subCategory, color: Colors.indigo, icon: Icons.account_tree, onTap: onTagTap == null ? null : () => onTagTap!(item.subCategory, Icons.account_tree)),
+                      if (item.color != "N/A") _Tag(label: item.color, color: Colors.pink, icon: Icons.color_lens_outlined),
+                      if (item.brand != "N/A") _Tag(label: item.brand, color: Colors.deepPurple, icon: Icons.branding_watermark_outlined),
+                      if (item.unit != "Piece") _Tag(label: item.unit, color: Colors.cyan, icon: Icons.straighten),
                     ],
                   ),
                 ],

@@ -148,6 +148,5 @@ class _CartSheetState extends State<CartSheet> {
             ],
           ),
         );
-    );
   }
 }

@@ -21,8 +21,21 @@ class BackupService {
     final creditsBox = Hive.box<CreditRecord>('creditsBox');
     final settingsBox = Hive.box('settingsBox');
 
-    final backupData = {
-      'inventory': inventoryBox.values.map((e) => {
+    // Prepare inventory with images encoded as base64
+    final inventoryWithImages = await Future.wait(inventoryBox.values.map((e) async {
+      String? imageBase64;
+      if (e.imagePath != null && e.imagePath!.isNotEmpty) {
+        try {
+          final imgFile = File(e.imagePath!);
+          if (await imgFile.exists()) {
+            final bytes = await imgFile.readAsBytes();
+            imageBase64 = base64Encode(bytes);
+          }
+        } catch (err) {
+          AppLogger.error("Failed to encode product image", error: err);
+        }
+      }
+      return {
         'id': e.id,
         'name': e.name,
         'price': e.price,
@@ -35,7 +48,16 @@ class BackupService {
         'weight': e.weight,
         'lowStockThreshold': e.lowStockThreshold,
         'imagePath': e.imagePath,
-      }).toList(),
+        'color': e.color,
+        'brand': e.brand,
+        'itemType': e.itemType,
+        'unit': e.unit,
+        'image_base64': imageBase64,
+      };
+    }).toList());
+
+    final backupData = {
+      'inventory': inventoryWithImages,
       'sales': salesBox.values.map((e) => {
         'id': e.id,
         'itemId': e.itemId,
@@ -134,6 +156,20 @@ class BackupService {
           await box.clear();
           for (var item in backupData['inventory']) {
             if (item is Map) {
+              // Restore product image if base64 exists
+              String? restoredImagePath = item['imagePath']?.toString();
+              if (item['image_base64'] != null && item['image_base64'].toString().isNotEmpty) {
+                try {
+                  final bytes = base64Decode(item['image_base64'].toString());
+                  final dir = await getApplicationDocumentsDirectory();
+                  final imgFile = File('${dir.path}/product_${item['id']}_${DateTime.now().millisecondsSinceEpoch}.png');
+                  await imgFile.writeAsBytes(bytes);
+                  restoredImagePath = imgFile.path;
+                } catch (e) {
+                  AppLogger.error("Error restoring product image", error: e);
+                }
+              }
+
               box.put(item['id'], InventoryItem(
                 id: item['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
                 name: item['name']?.toString() ?? "Unknown",
@@ -146,7 +182,11 @@ class BackupService {
                 size: item['size']?.toString() ?? "N/A",
                 weight: item['weight']?.toString() ?? "N/A",
                 lowStockThreshold: ((item['lowStockThreshold'] as num?)?.toInt()) ?? 5,
-                imagePath: item['imagePath']?.toString(),
+                imagePath: restoredImagePath,
+                color: item['color']?.toString() ?? "N/A",
+                brand: item['brand']?.toString() ?? "N/A",
+                itemType: item['itemType']?.toString() ?? "N/A",
+                unit: item['unit']?.toString() ?? "Piece",
               ));
             }
           }

@@ -133,9 +133,13 @@ class ReportingService {
       TextCellValue("Price (Rs)"),
       TextCellValue("Current Stock"),
       TextCellValue("Stock Value (Rs)"),
+      TextCellValue("Color"),
+      TextCellValue("Brand"),
+      TextCellValue("Item Type"),
+      TextCellValue("Unit"),
     ]);
 
-    for (int i = 0; i < 7; i++) {
+    for (int i = 0; i < 11; i++) {
       sheetObject.cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0)).cellStyle = headerStyle;
     }
 
@@ -149,6 +153,10 @@ class ReportingService {
         DoubleCellValue(item.price),
         IntCellValue(item.stock),
         DoubleCellValue(item.price * item.stock),
+        TextCellValue(item.color),
+        TextCellValue(item.brand),
+        TextCellValue(item.itemType),
+        TextCellValue(item.unit),
       ]);
     }
 
@@ -317,6 +325,10 @@ class ReportingService {
                 barcode: barcode,
                 price: price,
                 stock: stock,
+                color: "N/A",
+                brand: "N/A",
+                itemType: "N/A",
+                unit: "Piece",
               ));
             }
           }

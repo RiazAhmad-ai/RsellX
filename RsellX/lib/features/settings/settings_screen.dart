@@ -1,6 +1,5 @@
 // lib/features/settings/settings_screen.dart
 import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:rsellx/providers/settings_provider.dart';
@@ -10,7 +9,6 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../core/services/reporting_service.dart';
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 

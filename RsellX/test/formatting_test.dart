@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:RsellX/utils/formatting.dart';
+import 'package:rsellx/shared/utils/formatting.dart';
 
 void main() {
   group('Formatter Tests', () {

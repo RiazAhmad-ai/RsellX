@@ -40,6 +40,18 @@ class InventoryItem extends HiveObject {
   @HiveField(12)
   String? imagePath;
 
+  @HiveField(13)
+  String color;
+
+  @HiveField(14)
+  String brand;
+
+  @HiveField(15)
+  String itemType;
+
+  @HiveField(16)
+  String unit;
+
   InventoryItem({
     required this.id,
     required this.name,
@@ -47,11 +59,15 @@ class InventoryItem extends HiveObject {
     required this.stock,
     this.description,
     this.barcode = "N/A",
-    this.lowStockThreshold = 5,
+    this.lowStockThreshold = 3,
     this.category = "General",
     this.size = "N/A",
     this.weight = "N/A",
     this.subCategory = "N/A",
     this.imagePath,
+    this.color = "N/A",
+    this.brand = "N/A",
+    this.itemType = "N/A",
+    this.unit = "Piece",
   });
 }

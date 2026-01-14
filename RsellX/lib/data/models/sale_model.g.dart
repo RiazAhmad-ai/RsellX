@@ -27,10 +27,10 @@ class SaleRecordAdapter extends TypeAdapter<SaleRecord> {
       date: fields[7] as DateTime,
       status: fields[8] as String,
       billId: fields[9] as String?,
-      category: fields[10] == null ? "General" : fields[10] as String,
-      size: fields[11] == null ? "N/A" : fields[11] as String,
-      weight: fields[12] == null ? "N/A" : fields[12] as String,
-      subCategory: fields[13] == null ? "N/A" : fields[13] as String,
+      category: fields[10] as String,
+      size: fields[11] as String,
+      weight: fields[12] as String,
+      subCategory: fields[13] as String,
       imagePath: fields[14] as String?,
     );
   }

@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:rsellx/data/models/inventory_model.dart';
 import '../../../core/theme/app_colors.dart';
@@ -100,6 +99,7 @@ class InventoryListItem extends StatelessWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       item.name, 
@@ -147,6 +147,10 @@ class InventoryListItem extends StatelessWidget {
                         if (item.subCategory != "N/A") _Tag(label: item.subCategory, color: Colors.indigo, icon: Icons.account_tree, onTap: onTagTap == null ? null : () => onTagTap!(item.subCategory, Icons.account_tree)),
                         if (item.size != "N/A") _Tag(label: item.size, color: Colors.orange, icon: Icons.straighten),
                         if (item.weight != "N/A") _Tag(label: item.weight, color: Colors.teal, icon: Icons.scale),
+                        if (item.color != "N/A") _Tag(label: item.color, color: Colors.pink, icon: Icons.color_lens_outlined),
+                        if (item.brand != "N/A") _Tag(label: item.brand, color: Colors.deepPurple, icon: Icons.branding_watermark_outlined),
+                        if (item.itemType != "N/A") _Tag(label: item.itemType, color: Colors.brown, icon: Icons.style_outlined),
+                        if (item.unit != "Piece") _Tag(label: item.unit, color: Colors.cyan, icon: Icons.straighten),
                       ],
                     ),
                   ],

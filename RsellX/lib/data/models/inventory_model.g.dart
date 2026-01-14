@@ -23,19 +23,23 @@ class InventoryItemAdapter extends TypeAdapter<InventoryItem> {
       stock: fields[3] as int,
       description: fields[4] as String?,
       barcode: fields[6] as String,
-      lowStockThreshold: fields[7] == null ? 5 : fields[7] as int,
-      category: fields[8] == null ? "General" : fields[8] as String,
-      size: fields[9] == null ? "N/A" : fields[9] as String,
-      weight: fields[10] == null ? "N/A" : fields[10] as String,
-      subCategory: fields[11] == null ? "N/A" : fields[11] as String,
+      lowStockThreshold: fields[7] as int,
+      category: fields[8] as String,
+      size: fields[9] as String,
+      weight: fields[10] as String,
+      subCategory: fields[11] as String,
       imagePath: fields[12] as String?,
+      color: (fields[13] as String?) ?? "N/A",
+      brand: (fields[14] as String?) ?? "N/A",
+      itemType: (fields[15] as String?) ?? "N/A",
+      unit: (fields[16] as String?) ?? "Piece",
     );
   }
 
   @override
   void write(BinaryWriter writer, InventoryItem obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -59,7 +63,15 @@ class InventoryItemAdapter extends TypeAdapter<InventoryItem> {
       ..writeByte(11)
       ..write(obj.subCategory)
       ..writeByte(12)
-      ..write(obj.imagePath);
+      ..write(obj.imagePath)
+      ..writeByte(13)
+      ..write(obj.color)
+      ..writeByte(14)
+      ..write(obj.brand)
+      ..writeByte(15)
+      ..write(obj.itemType)
+      ..writeByte(16)
+      ..write(obj.unit);
   }
 
   @override

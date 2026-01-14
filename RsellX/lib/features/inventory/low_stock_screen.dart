@@ -17,10 +17,13 @@ class LowStockScreen extends StatefulWidget {
 
 class _LowStockScreenState extends State<LowStockScreen> {
   final AudioPlayer _audioPlayer = AudioPlayer();
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void dispose() {
     _audioPlayer.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -250,9 +253,25 @@ class _LowStockScreenState extends State<LowStockScreen> {
     final inventoryProvider = context.watch<InventoryProvider>();
     
     // Filter items with stock < lowStockThreshold
-    final lowStockItems = inventoryProvider.inventory.where((item) {
+    List<InventoryItem> lowStockItems = inventoryProvider.inventory.where((item) {
       return item.stock < item.lowStockThreshold;
     }).toList();
+
+    // Apply search filter
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+      lowStockItems = lowStockItems.where((item) {
+        return item.name.toLowerCase().contains(query) ||
+               item.barcode.toLowerCase().contains(query) ||
+               item.category.toLowerCase().contains(query) ||
+               item.subCategory.toLowerCase().contains(query) ||
+               item.brand.toLowerCase().contains(query) ||
+               item.color.toLowerCase().contains(query) ||
+               item.size.toLowerCase().contains(query) ||
+               item.itemType.toLowerCase().contains(query) ||
+               item.unit.toLowerCase().contains(query);
+      }).toList();
+    }
 
     // Sort: OUT OF STOCK items first, then by stock ascending
     lowStockItems.sort((a, b) {
@@ -275,7 +294,7 @@ class _LowStockScreenState extends State<LowStockScreen> {
           style: TextStyle(color: Colors.red, fontWeight: FontWeight.w900),
         ),
       ),
-      body: lowStockItems.isEmpty
+      body: lowStockItems.isEmpty && _searchQuery.isEmpty
           ? const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -289,45 +308,108 @@ class _LowStockScreenState extends State<LowStockScreen> {
                 ],
               ),
             )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: lowStockItems.length + 1, // +1 for header
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.red[50],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0x4DF44336)),
+          : Column(
+              children: [
+                // Search Bar
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
                         ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.info_outline, color: Colors.red, size: 20),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                "${lowStockItems.length} items need attention",
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.red,
-                                ),
-                              ),
-                            ),
-                          ],
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (value) => setState(() => _searchQuery = value),
+                      decoration: InputDecoration(
+                        hintText: "Search by name, barcode, brand, color...",
+                        hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                        prefixIcon: Icon(Icons.search, color: Colors.grey[500]),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _searchQuery = '');
+                                },
+                                icon: Icon(Icons.close, color: Colors.grey[500]),
+                              )
+                            : null,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
                         ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       ),
-                      const SizedBox(height: 20),
-                    ],
-                  );
-                }
-                final item = lowStockItems[index - 1];
-                return _buildDetailedLowStockItem(item);
-              },
+                    ),
+                  ),
+                ),
+                // Results
+                Expanded(
+                  child: lowStockItems.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.search_off, size: 60, color: Colors.grey[400]),
+                              const SizedBox(height: 16),
+                              Text(
+                                "No items found for '$_searchQuery'",
+                                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: lowStockItems.length + 1, // +1 for header
+                          itemBuilder: (context, index) {
+                            if (index == 0) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red[50],
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: const Color(0x4DF44336)),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.info_outline, color: Colors.red, size: 20),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            "${lowStockItems.length} items need attention",
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.red,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                ],
+                              );
+                            }
+                            final item = lowStockItems[index - 1];
+                            return _buildDetailedLowStockItem(item);
+                          },
+                        ),
+                ),
+              ],
             ),
     );
   }
@@ -444,10 +526,18 @@ class _LowStockScreenState extends State<LowStockScreen> {
                               _buildTag(item.category, Colors.purple, Icons.category),
                             if (item.subCategory != "N/A")
                               _buildTag(item.subCategory, Colors.indigo, Icons.account_tree),
+                            if (item.brand != "N/A")
+                              _buildTag(item.brand, Colors.blue, Icons.verified),
+                            if (item.color != "N/A")
+                              _buildTag(item.color, Colors.pink, Icons.palette),
                             if (item.size != "N/A")
                               _buildTag(item.size, Colors.orange, Icons.straighten),
                             if (item.weight != "N/A")
                               _buildTag(item.weight, Colors.teal, Icons.scale),
+                            if (item.itemType != "N/A")
+                              _buildTag(item.itemType, Colors.cyan, Icons.style),
+                            if (item.unit != "Piece")
+                              _buildTag(item.unit, Colors.deepPurple, Icons.inventory),
                           ],
                         ),
                       ],

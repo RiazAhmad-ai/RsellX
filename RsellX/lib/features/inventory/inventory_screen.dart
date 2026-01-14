@@ -253,6 +253,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final sizeCtrl = TextEditingController(text: item.size);
     final weightCtrl = TextEditingController(text: item.weight);
     final thresholdCtrl = TextEditingController(text: item.lowStockThreshold.toString());
+    final colorCtrl = TextEditingController(text: item.color);
+    final brandCtrl = TextEditingController(text: item.brand);
+    final itemTypeCtrl = TextEditingController(text: item.itemType);
+    String selectedUnit = item.unit;
+    final List<String> unitOptions = ["Piece", "Kg", "Gram", "Liter", "Meter", "Box", "Pack", "Dozen", "Pair", "Set"];
     String? editImagePath = item.imagePath;
     final imagePicker = ImagePicker();
 
@@ -708,6 +713,86 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   ),
                   const SizedBox(height: 20),
                   
+                  // === NEW: Color & Brand Row ===
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildSectionLabel("COLOR (رنگ)", Icons.color_lens_outlined),
+                            const SizedBox(height: 10),
+                            _buildStyledTextField(controller: colorCtrl, hint: "Red, Blue...", icon: Icons.palette, iconColor: Colors.pink),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildSectionLabel("BRAND (برانڈ)", Icons.branding_watermark_outlined),
+                            const SizedBox(height: 10),
+                            _buildStyledTextField(controller: brandCtrl, hint: "Brand Name", icon: Icons.business, iconColor: Colors.deepPurple),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // === NEW: Item Type & Unit Row ===
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildSectionLabel("ITEM TYPE (قسم)", Icons.style_outlined),
+                            const SizedBox(height: 10),
+                            _buildStyledTextField(controller: itemTypeCtrl, hint: "Type", icon: Icons.category_outlined, iconColor: Colors.brown),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildSectionLabel("UNIT (یونٹ)", Icons.straighten),
+                            const SizedBox(height: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: selectedUnit,
+                                  icon: const Icon(Icons.arrow_drop_down),
+                                  isExpanded: true,
+                                  items: unitOptions.map((String unit) {
+                                    return DropdownMenuItem<String>(
+                                      value: unit,
+                                      child: Text(unit),
+                                    );
+                                  }).toList(),
+                                  onChanged: (String? newValue) {
+                                    setModalState(() {
+                                      selectedUnit = newValue ?? "Piece";
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  
                   Row(
                     children: [
                       Expanded(
@@ -800,6 +885,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               item.weight = weightCtrl.text.trim().isEmpty ? "N/A" : weightCtrl.text.trim();
                               item.lowStockThreshold = int.tryParse(thresholdCtrl.text) ?? item.lowStockThreshold;
                               item.imagePath = editImagePath;
+                              item.color = colorCtrl.text.trim().isEmpty ? "N/A" : colorCtrl.text.trim();
+                              item.brand = brandCtrl.text.trim().isEmpty ? "N/A" : brandCtrl.text.trim();
+                              item.itemType = itemTypeCtrl.text.trim().isEmpty ? "N/A" : itemTypeCtrl.text.trim();
+                              item.unit = selectedUnit;
                               item.save();
                               Navigator.pop(context);
                             },

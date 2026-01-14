@@ -1,17 +1,12 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../inventory/inventory_screen.dart';
 import '../history/history_screen.dart';
 import '../expenses/expense_screen.dart';
-import 'package:rsellx/core/utils/fuzzy_search.dart';
 import '../../data/models/inventory_model.dart';
-import '../../data/models/sale_model.dart';
 import '../inventory/sell_item_sheet.dart';
 import '../../shared/widgets/full_scanner_screen.dart';
-import '../../core/utils/manual_text_input.dart';
 import '../../core/utils/smart_search_input.dart';
 import '../../core/utils/image_path_helper.dart';
 import '../../core/theme/app_colors.dart';
@@ -115,77 +110,6 @@ class _MainScreenState extends State<MainScreen> {
     
     // No action needed - modal handles everything internally
     // Modal stays open until user explicitly closes it
-  }
-
-  void _openSellSheet(InventoryItem item) async {
-    if (!mounted) return;
-    final result = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-      ),
-      builder: (context) => SellItemSheet(item: item),
-    );
-
-    if (result == "VIEW_CART") {
-      if (!mounted) return;
-      // Small delay for smooth transition
-      await Future.delayed(const Duration(milliseconds: 150));
-      Navigator.push(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => const CartScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 300),
-        ),
-      );
-    }
-  }
-
-  void _showImagePreview(BuildContext context, String imagePath, String title) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close, color: Colors.white, size: 30),
-                ),
-              ],
-            ),
-            Flexible(
-              child: InteractiveViewer(
-                minScale: 0.5,
-                maxScale: 4.0,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(30),
-                  child: Image.file(
-                    ImagePathHelper.getFile(imagePath),
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -492,16 +416,9 @@ class _MainScreenState extends State<MainScreen> {
               ),
             )
           else
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
         ],
       ),
     );
   }
-}
-
-// Helper class for smart sorting
-class _ScoredItem {
-  final InventoryItem item;
-  final int score;
-  _ScoredItem(this.item, this.score);
 }

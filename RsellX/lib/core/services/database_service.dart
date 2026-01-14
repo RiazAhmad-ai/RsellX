@@ -124,6 +124,10 @@ class DatabaseService {
           size: value['size']?.toString() ?? "N/A",
           weight: value['weight']?.toString() ?? "N/A",
           lowStockThreshold: (value['lowStockThreshold'] as num?)?.toInt() ?? 5,
+          color: value['color']?.toString() ?? "N/A",
+          brand: value['brand']?.toString() ?? "N/A",
+          itemType: value['itemType']?.toString() ?? "N/A",
+          unit: value['unit']?.toString() ?? "Piece",
         );
       }
       return null;
